@@ -64,16 +64,29 @@ db.serialize(() => {
 
   // 3) PRODUCTS
   db.run(`
-    CREATE TABLE IF NOT EXISTS products (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      unit TEXT NOT NULL,                 -- 'kg' yoki 'piece'
-      category TEXT NOT NULL DEFAULT 'PRODUCT',  -- PRODUCT yoki DECORATION
-      price REAL DEFAULT 0,
-      created_at TEXT DEFAULT (datetime('now')),
-      updated_at TEXT
-    )
-  `);
+  CREATE TABLE IF NOT EXISTS products (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    unit TEXT NOT NULL,                 -- 'kg' yoki 'piece'
+    category TEXT NOT NULL DEFAULT 'PRODUCT',  -- PRODUCT / DECORATION / UTILITY
+    price REAL DEFAULT 0,               -- asosiy sotuv narxi (filiallar)
+    wholesale_price REAL DEFAULT 0,     -- do'konlarga sotish narxi
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT
+  )
+`);
+
+  db.run(
+    `ALTER TABLE products ADD COLUMN wholesale_price REAL DEFAULT 0`,
+    (err) => {
+      if (err && !err.message.includes('duplicate column')) {
+        console.error(
+          "products jadvaliga wholesale_price ustunini qo'shishda xato:",
+          err.message
+        );
+      }
+    }
+  );
 
   // 4) SALES (sotuv "shapkasi")
   db.run(`

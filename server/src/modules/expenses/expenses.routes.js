@@ -1,16 +1,17 @@
 const express = require('express');
 const router = express.Router();
-
 const controller = require('./expenses.controller');
 
-// GET /api/expenses?type=ingredients|decor|utility|all
+// GET /api/expenses?type=ingredients|decor|utility
 router.get('/', controller.getExpenses);
+
+// GET /api/expenses/:id
+router.get('/:id', controller.getExpenseById);
 
 // POST /api/expenses
 router.post('/', controller.createExpense);
 
-// PUT /api/expenses/:id  (hozircha service.updateExpense ishlaydi,
-// agar repo'da updateExpense implement qilinmagan bo'lsa, 501 / xato qaytishi mumkin)
+// PUT /api/expenses/:id
 router.put('/:id', controller.updateExpense);
 
 // DELETE /api/expenses/:id

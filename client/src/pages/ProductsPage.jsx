@@ -6,6 +6,14 @@ const FILTER_ALL = "ALL";
 const FILTER_KG = "KG";
 const FILTER_PIECE = "PIECE";
 const FILTER_DECOR = "DECOR";
+const FILTER_UTILITY = "UTILITY";
+const FILTER_PRODUCT = "PRODUCT_ONLY";
+const FILTER_INGREDIENT = "INGREDIENT_ONLY";
+
+const CATEGORY_PRODUCT = "PRODUCT";
+const CATEGORY_DECORATION = "DECORATION";
+const CATEGORY_UTILITY = "UTILITY";
+const CATEGORY_INGREDIENT = "INGREDIENT";
 
 function ProductsPage() {
     const [products, setProducts] = useState([]);
@@ -19,21 +27,39 @@ function ProductsPage() {
         name: "",
         unit: "dona", // 'dona' yoki 'kg'
         price: "",
-        category: "PRODUCT", // PRODUCT yoki DECORATION
+        wholesale_price: "",
+        category: CATEGORY_PRODUCT, // PRODUCT | DECORATION | UTILITY | INGREDIENT
     });
 
     const formatUnit = (unit) => {
         if (!unit) return "-";
         if (unit === "piece") return "dona";
+        if (unit === "dona") return "dona";
         return unit;
     };
 
     const formatCategory = (category) => {
         if (!category) return "-";
-        if (category === "DECORATION") return "Dekoratsiya";
-        if (category === "PRODUCT") return "Mahsulot";
+        if (category === CATEGORY_DECORATION) return "Dekoratsiya / bezak";
+        if (category === CATEGORY_PRODUCT) return "Ishlab chiqilgan mahsulot";
+        if (category === CATEGORY_UTILITY) return "Kommunal / xizmat";
+        if (category === CATEGORY_INGREDIENT) return "Masalliq";
         return category;
     };
+
+    const isProduct = form.category === CATEGORY_PRODUCT;
+    const isDecor = form.category === CATEGORY_DECORATION;
+    const isUtility = form.category === CATEGORY_UTILITY;
+    const isIngredient = form.category === CATEGORY_INGREDIENT;
+
+    const nameLabel = isUtility
+        ? "Kommunal xizmat nomi"
+        : isIngredient
+            ? "Masalliq nomi"
+            : "Mahsulot nomi";
+
+    const priceLabel =
+        isUtility || isIngredient ? "Narx" : "Filiallar uchun narx";
 
     // Productlarni yuklash
     const fetchProducts = async () => {
@@ -58,6 +84,21 @@ function ProductsPage() {
     // Form o‘zgarishlari
     const handleChange = (e) => {
         const { name, value } = e.target;
+
+        if (name === "category") {
+            setForm((prev) => ({
+                ...prev,
+                category: value,
+                unit:
+                    value === CATEGORY_UTILITY
+                        ? "dona"
+                        : prev.unit || "dona",
+                wholesale_price:
+                    value === CATEGORY_PRODUCT ? prev.wholesale_price : "",
+            }));
+            return;
+        }
+
         setForm((prev) => ({ ...prev, [name]: value }));
     };
 
@@ -66,7 +107,8 @@ function ProductsPage() {
             name: "",
             unit: "dona",
             price: "",
-            category: "PRODUCT",
+            wholesale_price: "",
+            category: CATEGORY_PRODUCT,
         });
         setEditingId(null);
     };
@@ -77,7 +119,13 @@ function ProductsPage() {
         setError("");
 
         if (!form.name.trim()) {
-            setError("Mahsulot nomi majburiy");
+            setError(
+                isUtility
+                    ? "Kommunal xizmat nomi majburiy"
+                    : isIngredient
+                        ? "Masalliq nomi majburiy"
+                        : "Mahsulot nomi majburiy"
+            );
             return;
         }
 
@@ -86,9 +134,13 @@ function ProductsPage() {
 
             const payload = {
                 name: form.name.trim(),
-                unit: form.unit, // 'kg' yoki 'dona'
+                unit: isUtility ? "dona" : form.unit,
+                category: form.category,
                 price: Number(form.price) || 0,
-                category: form.category, // PRODUCT / DECORATION
+                wholesale_price:
+                    isProduct && form.wholesale_price !== ""
+                        ? Number(form.wholesale_price) || 0
+                        : 0,
             };
 
             if (editingId) {
@@ -99,7 +151,6 @@ function ProductsPage() {
                 );
             } else {
                 const res = await api.post("/products", payload);
-                // yangi mahsulotni TEPAga qo'yamiz
                 setProducts((prev) => [res.data, ...prev]);
             }
 
@@ -119,8 +170,13 @@ function ProductsPage() {
         setForm({
             name: product.name || "",
             unit: product.unit === "kg" ? "kg" : "dona",
-            price: product.price ?? "",
-            category: product.category || "PRODUCT",
+            price:
+                typeof product.price === "number" ? String(product.price) : "",
+            wholesale_price:
+                typeof product.wholesale_price === "number"
+                    ? String(product.wholesale_price)
+                    : "",
+            category: product.category || CATEGORY_PRODUCT,
         });
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
@@ -150,8 +206,16 @@ function ProductsPage() {
         () =>
             products.filter((p) => {
                 if (filter === FILTER_KG) return p.unit === "kg";
-                if (filter === FILTER_PIECE) return p.unit === "piece";
-                if (filter === FILTER_DECOR) return p.category === "DECORATION";
+                if (filter === FILTER_PIECE)
+                    return p.unit === "piece" || p.unit === "dona";
+                if (filter === FILTER_DECOR)
+                    return p.category === CATEGORY_DECORATION;
+                if (filter === FILTER_UTILITY)
+                    return p.category === CATEGORY_UTILITY;
+                if (filter === FILTER_PRODUCT)
+                    return p.category === CATEGORY_PRODUCT;
+                if (filter === FILTER_INGREDIENT)
+                    return p.category === CATEGORY_INGREDIENT;
                 return true;
             }),
         [products, filter]
@@ -163,7 +227,8 @@ function ProductsPage() {
                 <div>
                     <h1 className="page-title">Mahsulotlar</h1>
                     <p className="page-subtitle">
-                        Asosiy mahsulotlar va bezaklar ro&apos;yxati.
+                        Ishlab chiqilgan mahsulotlar, masalliqlar, bezaklar va
+                        kommunal xizmatlar ro&apos;yxati.
                     </p>
                 </div>
             </div>
@@ -188,30 +253,7 @@ function ProductsPage() {
                 {/* Add / edit product form */}
                 <form onSubmit={handleSubmit}>
                     <div className="form-row">
-                        <div>
-                            <label>Mahsulot nomi</label>
-                            <input
-                                className="input"
-                                name="name"
-                                value={form.name}
-                                onChange={handleChange}
-                                required
-                            />
-                        </div>
-
-                        <div>
-                            <label>Birlik</label>
-                            <select
-                                className="input"
-                                name="unit"
-                                value={form.unit}
-                                onChange={handleChange}
-                            >
-                                <option value="dona">dona</option>
-                                <option value="kg">kg</option>
-                            </select>
-                        </div>
-
+                        {/* Kategoriya eng tepada */}
                         <div>
                             <label>Kategoriya</label>
                             <select
@@ -220,13 +262,59 @@ function ProductsPage() {
                                 value={form.category}
                                 onChange={handleChange}
                             >
-                                <option value="PRODUCT">Asosiy mahsulot</option>
-                                <option value="DECORATION">Dekoratsiya / bezak</option>
+                                <option value={CATEGORY_PRODUCT}>
+                                    Ishlab chiqilgan mahsulot
+                                </option>
+                                <option value={CATEGORY_INGREDIENT}>
+                                    Masalliq
+                                </option>
+                                <option value={CATEGORY_DECORATION}>
+                                    Dekoratsiya / bezak
+                                </option>
+                                <option value={CATEGORY_UTILITY}>
+                                    Kommunal / xizmat
+                                </option>
                             </select>
                         </div>
 
+                        {/* Nomi */}
                         <div>
-                            <label>Narx (ixtiyoriy)</label>
+                            <label>{nameLabel}</label>
+                            <input
+                                className="input"
+                                name="name"
+                                value={form.name}
+                                onChange={handleChange}
+                                required
+                                placeholder={
+                                    isUtility
+                                        ? "Masalan: Elektr energiyasi"
+                                        : isIngredient
+                                            ? "Masalan: Un 50kg"
+                                            : "Masalan: Tort 1 kg"
+                                }
+                            />
+                        </div>
+
+                        {/* Birlik – kommunalda ko'rinmaydi */}
+                        {!isUtility && (
+                            <div>
+                                <label>Birlik</label>
+                                <select
+                                    className="input"
+                                    name="unit"
+                                    value={form.unit}
+                                    onChange={handleChange}
+                                >
+                                    <option value="dona">dona</option>
+                                    <option value="kg">kg</option>
+                                </select>
+                            </div>
+                        )}
+
+                        {/* Narx – hamma kategoriyada bor, label o'zgaradi */}
+                        <div>
+                            <label>{priceLabel}</label>
                             <input
                                 className="input"
                                 name="price"
@@ -236,6 +324,21 @@ function ProductsPage() {
                                 placeholder="0"
                             />
                         </div>
+
+                        {/* Do‘konlar uchun narx – faqat ishlab chiqilgan mahsulot uchun */}
+                        {isProduct && (
+                            <div>
+                                <label>Do‘konlar uchun narx (ulgurji)</label>
+                                <input
+                                    className="input"
+                                    name="wholesale_price"
+                                    type="number"
+                                    value={form.wholesale_price}
+                                    onChange={handleChange}
+                                    placeholder="0"
+                                />
+                            </div>
+                        )}
                     </div>
 
                     <div
@@ -251,7 +354,7 @@ function ProductsPage() {
                                 ? "Saqlanmoqda..."
                                 : editingId
                                     ? "O'zgartirishni saqlash"
-                                    : "Mahsulot qo‘shish"}
+                                    : "Qo‘shish"}
                         </button>
 
                         {editingId && (
@@ -289,59 +392,38 @@ function ProductsPage() {
                         Jami: <strong>{products.length}</strong> ta mahsulot
                     </div>
 
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                        <button
-                            type="button"
-                            className="button-primary"
-                            onClick={() => setFilter(FILTER_ALL)}
+                    <div style={{ minWidth: 220 }}>
+                        <label
                             style={{
-                                padding: "4px 10px",
                                 fontSize: 12,
-                                boxShadow: "none",
-                                opacity: filter === FILTER_ALL ? 1 : 0.6,
+                                display: "block",
+                                marginBottom: 4,
+                                opacity: 0.8,
                             }}
                         >
-                            Hammasi
-                        </button>
-                        <button
-                            type="button"
-                            className="button-primary"
-                            onClick={() => setFilter(FILTER_KG)}
-                            style={{
-                                padding: "4px 10px",
-                                fontSize: 12,
-                                boxShadow: "none",
-                                opacity: filter === FILTER_KG ? 1 : 0.6,
-                            }}
+                            Filter
+                        </label>
+                        <select
+                            className="input"
+                            value={filter}
+                            onChange={(e) => setFilter(e.target.value)}
                         >
-                            Faqat kg
-                        </button>
-                        <button
-                            type="button"
-                            className="button-primary"
-                            onClick={() => setFilter(FILTER_PIECE)}
-                            style={{
-                                padding: "4px 10px",
-                                fontSize: 12,
-                                boxShadow: "none",
-                                opacity: filter === FILTER_PIECE ? 1 : 0.6,
-                            }}
-                        >
-                            Faqat dona
-                        </button>
-                        <button
-                            type="button"
-                            className="button-primary"
-                            onClick={() => setFilter(FILTER_DECOR)}
-                            style={{
-                                padding: "4px 10px",
-                                fontSize: 12,
-                                boxShadow: "none",
-                                opacity: filter === FILTER_DECOR ? 1 : 0.6,
-                            }}
-                        >
-                            Faqat bezaklar
-                        </button>
+                            <option value={FILTER_ALL}>Hammasi</option>
+                            <option value={FILTER_KG}>Faqat kg</option>
+                            <option value={FILTER_PIECE}>Faqat dona</option>
+                            <option value={FILTER_PRODUCT}>
+                                Faqat ishlab chiqilgan mahsulotlar
+                            </option>
+                            <option value={FILTER_INGREDIENT}>
+                                Faqat masalliqlar
+                            </option>
+                            <option value={FILTER_DECOR}>
+                                Faqat bezaklar
+                            </option>
+                            <option value={FILTER_UTILITY}>
+                                Faqat kommunal
+                            </option>
+                        </select>
                     </div>
                 </div>
 
@@ -360,7 +442,8 @@ function ProductsPage() {
                                     <th>Birlik</th>
                                     <th>Kategoriya</th>
                                     <th>Narx</th>
-                                    <th style={{ width: 120 }}>Amallar</th>
+                                    <th>Do‘kon narxi</th>
+                                    <th style={{ width: 140 }}>Amallar</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -373,6 +456,15 @@ function ProductsPage() {
                                         <td>
                                             {typeof p.price === "number"
                                                 ? p.price.toLocaleString("uz-UZ")
+                                                : "-"}
+                                        </td>
+                                        <td>
+                                            {p.category === CATEGORY_PRODUCT &&
+                                                typeof p.wholesale_price === "number" &&
+                                                p.wholesale_price > 0
+                                                ? p.wholesale_price.toLocaleString(
+                                                    "uz-UZ"
+                                                )
                                                 : "-"}
                                         </td>
                                         <td>

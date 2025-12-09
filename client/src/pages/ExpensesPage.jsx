@@ -7,32 +7,40 @@ const TYPE_INGREDIENTS = "ingredients";
 const TYPE_DECOR = "decor";
 const TYPE_UTILITY = "utility";
 
+const TABS = [
+    { key: TYPE_INGREDIENTS, label: "Masalliqlar" },
+    { key: TYPE_DECOR, label: "Bezaklar / salyut" },
+    { key: TYPE_UTILITY, label: "Kommunal to‘lovlar" },
+];
+
 function ExpensesPage() {
     const { user } = useAuth();
 
-    const [expenseDate, setExpenseDate] = useState(() => {
-        const now = new Date();
-        return now.toISOString().slice(0, 10);
-    });
+    const [activeTab, setActiveTab] = useState(TYPE_INGREDIENTS);
 
-    const [type, setType] = useState(TYPE_INGREDIENTS);
+    const [date, setDate] = useState(() =>
+        new Date().toISOString().slice(0, 10)
+    );
 
-    // Umumiy summa (ingredients, utility uchun)
-    const [amount, setAmount] = useState("");
+    // Products
+    const [ingredientProducts, setIngredientProducts] = useState([]);
+    const [decorProducts, setDecorProducts] = useState([]);
+    const [utilityProducts, setUtilityProducts] = useState([]);
 
-    // Umumiy description
-    const [description, setDescription] = useState("");
+    const [loadingIngredientProducts, setLoadingIngredientProducts] =
+        useState(false);
+    const [loadingDecorProducts, setLoadingDecorProducts] = useState(false);
+    const [loadingUtilityProducts, setLoadingUtilityProducts] = useState(false);
 
-    // Bezaklar satrlari
-    const [decorItems, setDecorItems] = useState([
-        { product_id: "", quantity: "", total_price: "" },
+    // Forma satrlari – universal strukturada
+    // unit_price:
+    //  - ingredients: birlik narxi
+    //  - decor & utility: JAMI SUMMA (umumiy)
+    const [items, setItems] = useState([
+        { product_id: "", name: "", quantity: "", unit_price: "" },
     ]);
 
-    // Dekor mahsulotlar ro'yxati
-    const [decorationProducts, setDecorationProducts] = useState([]);
-    const [loadingDecorProducts, setLoadingDecorProducts] = useState(false);
-
-    // Jadval uchun
+    // Ro'yxat
     const [expenses, setExpenses] = useState([]);
     const [loadingExpenses, setLoadingExpenses] = useState(false);
 
@@ -42,139 +50,228 @@ function ExpensesPage() {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
-    const decorTotal = useMemo(
-        () =>
-            decorItems.reduce(
-                (sum, row) => sum + (Number(row.total_price) || 0),
-                0
-            ),
-        [decorItems]
-    );
+    const isIngredients = activeTab === TYPE_INGREDIENTS;
+    const isDecor = activeTab === TYPE_DECOR;
+    const isUtility = activeTab === TYPE_UTILITY;
 
-    const handleDecorChange = (index, field, value) => {
-        setDecorItems((prev) =>
-            prev.map((row, i) => (i === index ? { ...row, [field]: value } : row))
-        );
-    };
+    const productOptions = isIngredients
+        ? ingredientProducts
+        : isDecor
+            ? decorProducts
+            : utilityProducts;
 
-    const addDecorRow = () => {
-        setDecorItems((prev) => [
-            ...prev,
-            { product_id: "", quantity: "", total_price: "" },
-        ]);
-    };
+    const productLabel = isIngredients
+        ? "Masalliq *"
+        : isDecor
+            ? "Bezak mahsulot *"
+            : "Kommunal to‘lov *";
 
-    const removeDecorRow = (index) => {
-        setDecorItems((prev) => prev.filter((_, i) => i !== index));
-    };
+    // Umumiy summa (frontendda faqat ko‘rsatish uchun)
+    const totalCalculated = useMemo(() => {
+        if (isIngredients) {
+            // masalliqlar: miqdor * birlik narxi
+            return items.reduce((sum, row) => {
+                const q = Number(row.quantity || 0);
+                const p = Number(row.unit_price || 0);
+                if (!q || !p) return sum;
+                return sum + q * p;
+            }, 0);
+        }
 
-    const resetForm = () => {
-        setAmount("");
-        setDescription("");
-        setDecorItems([{ product_id: "", quantity: "", total_price: "" }]);
-        setEditingId(null);
-        setExpenseDate(new Date().toISOString().slice(0, 10));
-    };
+        // bezaklar & kommunal: foydalanuvchi kiritgan JAMI SUMMA lar yig‘indisi
+        return items.reduce((sum, row) => {
+            const total = Number(row.unit_price || 0);
+            if (!total) return sum;
+            return sum + total;
+        }, 0);
+    }, [items, isIngredients]);
 
-    // Dekor mahsulotlar
+    // Mahsulotlarni yuklash: masalliq, dekor va kommunal
     useEffect(() => {
-        if (type !== TYPE_DECOR) return;
-
-        setLoadingDecorProducts(true);
-        api
-            .get("/products/decorations")
-            .then((res) => {
-                setDecorationProducts(res.data || []);
-            })
-            .catch((err) => {
-                console.error(err);
-                setError(
-                    "Bezak mahsulotlar ro'yxatini olishda xatolik. Iltimos, sahifani yangilang yoki keyinroq urinib ko'ring."
+        const loadIngredients = async () => {
+            try {
+                setLoadingIngredientProducts(true);
+                const res = await api.get("/products");
+                const all = res.data || [];
+                const ingrs = all.filter(
+                    (p) => p.category === "INGREDIENT"
                 );
-            })
-            .finally(() => {
-                setLoadingDecorProducts(false);
-            });
-    }, [type]);
+                setIngredientProducts(ingrs);
+            } catch (err) {
+                console.error("ingredient load error:", err);
+                setError("Masalliq mahsulotlarini yuklashda xatolik.");
+            } finally {
+                setLoadingIngredientProducts(false);
+            }
+        };
 
-    // Tanlangan type bo'yicha expenses ro'yxatini yuklash
-    const fetchExpenses = async (currentType = type) => {
+        const loadDecor = async () => {
+            try {
+                setLoadingDecorProducts(true);
+                const res = await api.get("/products/decorations");
+                setDecorProducts(res.data || []);
+            } catch (err) {
+                console.error("decor load error:", err);
+                setError("Bezak mahsulotlarini yuklashda xatolik.");
+            } finally {
+                setLoadingDecorProducts(false);
+            }
+        };
+
+        const loadUtility = async () => {
+            try {
+                setLoadingUtilityProducts(true);
+                const res = await api.get("/products/utilities");
+                setUtilityProducts(res.data || []);
+            } catch (err) {
+                console.error("utility load error:", err);
+                setError("Kommunal mahsulotlarini yuklashda xatolik.");
+            } finally {
+                setLoadingUtilityProducts(false);
+            }
+        };
+
+        loadIngredients();
+        loadDecor();
+        loadUtility();
+    }, []);
+
+    // Tanlangan tur bo‘yicha xarajatlar ro‘yxatini yuklash
+    const fetchExpenses = async (type = activeTab) => {
         try {
             setLoadingExpenses(true);
-            const res = await api.get("/expenses", {
-                params: { type: currentType },
-            });
+            const res = await api.get("/expenses", { params: { type } });
             setExpenses(res.data || []);
         } catch (err) {
-            console.error(err);
-            setError("Xarajatlar ro'yxatini yuklashda xatolik");
+            console.error("loadExpenses error:", err);
+            setError("Xarajatlar ro‘yxatini yuklashda xatolik.");
         } finally {
             setLoadingExpenses(false);
         }
     };
 
     useEffect(() => {
-        fetchExpenses(type);
-    }, [type]);
+        fetchExpenses(activeTab);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeTab]);
+
+    const resetForm = () => {
+        setDate(new Date().toISOString().slice(0, 10));
+        setItems([{ product_id: "", name: "", quantity: "", unit_price: "" }]);
+        setEditingId(null);
+    };
+
+    const onTabChange = (tabKey) => {
+        setActiveTab(tabKey);
+        resetForm();
+    };
+
+    const handleItemChange = (index, field, value) => {
+        setItems((prev) => {
+            const copy = [...prev];
+            const row = { ...copy[index], [field]: value };
+
+            if (field === "product_id") {
+                const p = productOptions.find(
+                    (x) => String(x.id) === String(value)
+                );
+                if (p) {
+                    row.name = p.name;
+                }
+            }
+
+            copy[index] = row;
+            return copy;
+        });
+    };
+
+    const addRow = () => {
+        setItems((prev) => [
+            ...prev,
+            { product_id: "", name: "", quantity: "", unit_price: "" },
+        ]);
+    };
+
+    const removeRow = (index) => {
+        setItems((prev) => prev.filter((_, i) => i !== index));
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError("");
         setSuccess("");
 
+        const preparedItems = [];
+
+        for (const it of items) {
+            let product_id = it.product_id ? Number(it.product_id) : null;
+            let quantity = Number(it.quantity || 0);
+            let unit_price = Number(it.unit_price || 0);
+            let name = (it.name || "").trim();
+
+            if (!product_id) continue;
+
+            if (isIngredients) {
+                // Masalliqlar – product tanlaydi, miqdor + birlik narxi
+                if (!quantity || quantity <= 0) continue;
+                if (!unit_price || unit_price <= 0) continue;
+
+                const p = ingredientProducts.find(
+                    (x) => x.id === product_id
+                );
+                name = p?.name || name;
+
+                preparedItems.push({
+                    product_id,
+                    name,
+                    quantity,
+                    unit_price,
+                });
+            } else if (isDecor) {
+                // Bezaklar – product, miqdor (ixtiyoriy), JAMI SUMMA
+                if (!unit_price || unit_price <= 0) continue;
+
+                if (!quantity || quantity <= 0) {
+                    quantity = 1;
+                }
+
+                const totalSum = unit_price;
+                const calculatedUnitPrice = totalSum / quantity;
+
+                preparedItems.push({
+                    product_id,
+                    name: "",
+                    quantity,
+                    unit_price: calculatedUnitPrice,
+                });
+            } else if (isUtility) {
+                // Kommunal – product, JAMI SUMMA
+                if (!unit_price || unit_price <= 0) continue;
+
+                preparedItems.push({
+                    product_id,
+                    name: "",
+                    quantity: 1,
+                    unit_price,
+                });
+            }
+        }
+
+        if (!preparedItems.length) {
+            setError("Kamida bitta to‘liq xarajat bandini kiriting.");
+            return;
+        }
+
         try {
-            const basePayload = {
-                expense_date: expenseDate,
-                type,
-                description: description || null,
+            setSaving(true);
+
+            const payload = {
+                type: activeTab, // ingredients | decor | utility
+                date, // backendda expense_date ga aylantiriladi
+                description: "", // izohni ishlatmaymiz
+                items: preparedItems,
                 created_by: user?.id || null,
             };
-
-            let payload = basePayload;
-
-            if (type === TYPE_INGREDIENTS || type === TYPE_UTILITY) {
-                const val = Number(amount);
-                if (!val || val <= 0) {
-                    throw new Error("Summani to'g'ri kiriting");
-                }
-                payload = { ...basePayload, amount: val };
-            }
-
-            if (type === TYPE_DECOR) {
-                const itemsPayload = decorItems
-                    .map((row) => {
-                        const productId = row.product_id ? Number(row.product_id) : null;
-                        const quantity = Number(row.quantity) || 0;
-                        const totalPrice = Number(row.total_price) || 0;
-
-                        const product = decorationProducts.find(
-                            (p) => p.id === productId
-                        );
-
-                        return {
-                            product_id: productId,
-                            name: product?.name || "",
-                            quantity,
-                            total_price: totalPrice,
-                        };
-                    })
-                    .filter(
-                        (r) =>
-                            r.product_id &&
-                            r.quantity > 0 &&
-                            r.total_price > 0
-                    );
-
-                if (itemsPayload.length === 0) {
-                    throw new Error(
-                        "Bezaklar uchun kamida bitta to'g'ri satr kiritish kerak (mahsulot, miqdor, summa)."
-                    );
-                }
-
-                payload = { ...basePayload, items: itemsPayload };
-            }
-
-            setSaving(true);
 
             if (editingId) {
                 await api.put(`/expenses/${editingId}`, payload);
@@ -185,11 +282,11 @@ function ExpensesPage() {
             }
 
             resetForm();
-            fetchExpenses(type);
+            await fetchExpenses(activeTab);
         } catch (err) {
-            console.error(err);
+            console.error("create/update expense error:", err);
             const msg =
-                err.response?.data?.message ||
+                err?.response?.data?.message ||
                 err.message ||
                 "Xarajatni saqlashda xatolik.";
             setError(msg);
@@ -200,29 +297,43 @@ function ExpensesPage() {
 
     const handleEdit = (expense) => {
         setEditingId(expense.id);
-        setExpenseDate(expense.expense_date || expenseDate);
-        setType(expense.type);
-        setDescription(expense.description || "");
+        setActiveTab(expense.type || TYPE_INGREDIENTS);
+        setDate(expense.expense_date || date);
 
-        if (
-            expense.type === TYPE_INGREDIENTS ||
-            expense.type === TYPE_UTILITY
-        ) {
-            setAmount(
-                expense.total_amount != null ? String(expense.total_amount) : ""
-            );
-        }
-
-        if (expense.type === TYPE_DECOR && Array.isArray(expense.items)) {
-            setDecorItems(
-                expense.items.length
-                    ? expense.items.map((item) => ({
-                        product_id: item.product_id || "",
-                        quantity: item.quantity ?? "",
-                        total_price: item.total_price ?? "",
+        if (Array.isArray(expense.items) && expense.items.length > 0) {
+            if (expense.type === TYPE_INGREDIENTS) {
+                setItems(
+                    expense.items.map((it) => ({
+                        product_id: it.product_id || "",
+                        name: it.name || "",
+                        quantity:
+                            it.quantity != null ? String(it.quantity) : "",
+                        unit_price:
+                            it.unit_price != null ? String(it.unit_price) : "",
                     }))
-                    : [{ product_id: "", quantity: "", total_price: "" }]
-            );
+                );
+            } else {
+                setItems(
+                    expense.items.map((it) => {
+                        const q = Number(it.quantity || 0);
+                        const p = Number(it.unit_price || 0);
+                        const lineTotal =
+                            q && p ? String(q * p) : p ? String(p) : "";
+
+                        return {
+                            product_id: it.product_id || "",
+                            name: it.name || "",
+                            quantity:
+                                expense.type === TYPE_DECOR && it.quantity != null
+                                    ? String(it.quantity)
+                                    : "",
+                            unit_price: lineTotal, // formdagi "Jami summa"
+                        };
+                    })
+                );
+            }
+        } else {
+            setItems([{ product_id: "", name: "", quantity: "", unit_price: "" }]);
         }
 
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -234,7 +345,7 @@ function ExpensesPage() {
 
     const handleDelete = async (expense) => {
         const confirmed = window.confirm(
-            `Ushbu xarajatni (${expense.expense_date}, ${expense.total_amount} so'm) haqiqatan ham o'chirmoqchimisiz?`
+            `Ushbu xarajatni (${expense.expense_date}, ${expense.total_amount} so'm) o‘chirishni xohlaysizmi?`
         );
         if (!confirmed) return;
 
@@ -242,20 +353,26 @@ function ExpensesPage() {
             await api.delete(`/expenses/${expense.id}`);
             setExpenses((prev) => prev.filter((e) => e.id !== expense.id));
         } catch (err) {
-            console.error(err);
+            console.error("delete expense error:", err);
             const msg =
-                err.response?.data?.message ||
-                "Xarajatni o'chirishda xatolik.";
+                err?.response?.data?.message ||
+                "Xarajatni o‘chirishda xatolik.";
             setError(msg);
         }
     };
 
     const typeLabel = (() => {
-        if (type === TYPE_INGREDIENTS) return "Masalliqlar";
-        if (type === TYPE_DECOR) return "Bezaklar / salyut";
-        if (type === TYPE_UTILITY) return "Kommunal to'lovlar";
+        if (isIngredients) return "Masalliqlar";
+        if (isDecor) return "Bezaklar / salyut";
+        if (isUtility) return "Kommunal to‘lovlar";
         return "";
     })();
+
+    const currentTabInfo = isIngredients
+        ? "Masalliqlar – products → Masalliq bo‘limidan tanlanadi."
+        : isDecor
+            ? "Bezaklar – products → Dekoratsiya / bezak bo‘limidan tanlanadi. Jami summani kiriting."
+            : "Kommunal to‘lovlar – products → Kommunal (UTILITY) bo‘limidan tanlanadi. Jami summani kiriting.";
 
     return (
         <div className="page">
@@ -263,8 +380,8 @@ function ExpensesPage() {
                 <div>
                     <h1 className="page-title">Xarajatlar</h1>
                     <p className="page-subtitle">
-                        Masalliqlar, bezaklar va kommunal to&apos;lovlar bo&apos;yicha
-                        xarajatlarni kiritish va ko&apos;rish.
+                        Masalliqlar, bezaklar va kommunal to‘lovlar bo‘yicha xarajatlarni
+                        kiritish va ko‘rish.
                     </p>
                 </div>
 
@@ -272,19 +389,44 @@ function ExpensesPage() {
                     <input
                         className="input"
                         type="date"
-                        value={expenseDate}
-                        onChange={(e) => setExpenseDate(e.target.value)}
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
                     />
-                    <select
-                        className="input"
-                        value={type}
-                        onChange={(e) => setType(e.target.value)}
-                    >
-                        <option value={TYPE_INGREDIENTS}>Masalliqlar</option>
-                        <option value={TYPE_DECOR}>Bezaklar / salyut</option>
-                        <option value={TYPE_UTILITY}>Kommunal to&apos;lovlar</option>
-                    </select>
                 </div>
+            </div>
+
+            {/* TABLAR */}
+            <div
+                className="tabs"
+                style={{
+                    marginBottom: 12,
+                    display: "flex",
+                    gap: 8,
+                    flexWrap: "wrap",
+                }}
+            >
+                {TABS.map((tab) => (
+                    <button
+                        key={tab.key}
+                        type="button"
+                        className={
+                            "button-primary" +
+                            (activeTab === tab.key ? "" : " button-secondary")
+                        }
+                        style={{
+                            padding: "10px 18px",
+                            fontSize: 14,
+                            boxShadow: "none",
+                            opacity: activeTab === tab.key ? 1 : 0.75,
+                            borderRadius: 12,
+                            minWidth: 180,
+                            textAlign: "center",
+                        }}
+                        onClick={() => onTabChange(tab.key)}
+                    >
+                        {tab.label}
+                    </button>
+                ))}
             </div>
 
             {error && (
@@ -299,94 +441,97 @@ function ExpensesPage() {
                 </div>
             )}
 
+            {/* FORMA */}
             <div className="card">
+                <div className="card-header">
+                    <div>
+                        <div className="card-title">{typeLabel} xarajati</div>
+                        <div className="card-subtitle">{currentTabInfo}</div>
+                    </div>
+                </div>
+
                 <form onSubmit={handleSubmit}>
-                    {/* Masalliqlar yoki kommunal uchun umumiy summa */}
-                    {(type === TYPE_INGREDIENTS || type === TYPE_UTILITY) && (
-                        <>
-                            <div className="form-row">
-                                <div>
-                                    <label>
-                                        Umumiy summa (so&apos;m)
-                                        {type === TYPE_INGREDIENTS && " – masalliqlar"}
-                                        {type === TYPE_UTILITY && " – kommunal to'lovlar"}
-                                    </label>
-                                    <input
-                                        className="input"
-                                        type="number"
-                                        min="0"
-                                        value={amount}
-                                        onChange={(e) => setAmount(e.target.value)}
-                                        placeholder="0"
-                                    />
-                                </div>
-                            </div>
+                    <div className="table-wrapper">
+                        <table className="table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>{productLabel}</th>
 
-                            <div style={{ marginTop: 8, marginBottom: 8 }}>
-                                <label>Eslatma (ixtiyoriy)</label>
-                                <textarea
-                                    className="input"
-                                    rows={2}
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    placeholder={
-                                        type === TYPE_INGREDIENTS
-                                            ? "Masalliqlar xarajati haqida izoh..."
-                                            : "Qaysi kommunal to'lov uchun to'landi (masalan: Tok, gaz)..."
-                                    }
-                                />
-                            </div>
-                        </>
-                    )}
+                                    {/* Miqdor – masalliqlar va bezaklar uchun */}
+                                    {!isUtility && <th>Miqdor</th>}
 
-                    {/* Bezaklar uchun jadval */}
-                    {type === TYPE_DECOR && (
-                        <>
-                            <div className="table-wrapper">
-                                <table className="table">
-                                    <thead>
-                                        <tr>
-                                            <th>Mahsulot *</th>
-                                            <th>Miqdor</th>
-                                            <th>Jami summa</th>
-                                            <th></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {decorItems.map((row, index) => (
-                                            <tr key={index}>
-                                                <td>
-                                                    <select
-                                                        className="input"
-                                                        value={row.product_id}
-                                                        onChange={(e) =>
-                                                            handleDecorChange(
-                                                                index,
-                                                                "product_id",
-                                                                e.target.value
-                                                            )
-                                                        }
-                                                    >
-                                                        <option value="">
-                                                            {loadingDecorProducts
-                                                                ? "Yuklanmoqda..."
-                                                                : "Bezak mahsulotini tanlang"}
+                                    {/* Birlik narxi – faqat masalliqlar */}
+                                    {isIngredients && <th>Birlik narxi</th>}
+
+                                    {/* Jami / Jami summa kolonkalari */}
+                                    {isIngredients && <th>Jami</th>}
+                                    {!isIngredients && <th>Jami summa</th>}
+
+                                    <th />
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {items.map((row, index) => {
+                                    const q = Number(row.quantity || 0);
+                                    const p = Number(row.unit_price || 0);
+                                    const total =
+                                        isIngredients && q && p ? q * p : 0;
+
+                                    const loadingProducts = isIngredients
+                                        ? loadingIngredientProducts
+                                        : isDecor
+                                            ? loadingDecorProducts
+                                            : loadingUtilityProducts;
+
+                                    const placeholder = isIngredients
+                                        ? "Masalliqni tanlang"
+                                        : isDecor
+                                            ? "Bezak mahsulotini tanlang"
+                                            : "Kommunal mahsulotni tanlang";
+
+                                    return (
+                                        <tr key={index}>
+                                            <td>{index + 1}</td>
+
+                                            <td>
+                                                <select
+                                                    className="input"
+                                                    value={row.product_id}
+                                                    onChange={(e) =>
+                                                        handleItemChange(
+                                                            index,
+                                                            "product_id",
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                >
+                                                    <option value="">
+                                                        {loadingProducts
+                                                            ? "Yuklanmoqda..."
+                                                            : placeholder}
+                                                    </option>
+                                                    {productOptions.map((p) => (
+                                                        <option
+                                                            key={p.id}
+                                                            value={p.id}
+                                                        >
+                                                            {p.name}
                                                         </option>
-                                                        {decorationProducts.map((p) => (
-                                                            <option key={p.id} value={p.id}>
-                                                                {p.name}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </td>
+                                                    ))}
+                                                </select>
+                                            </td>
+
+                                            {!isUtility && (
                                                 <td>
                                                     <input
                                                         className="input"
                                                         type="number"
                                                         min="0"
+                                                        step="0.01"
                                                         value={row.quantity}
                                                         onChange={(e) =>
-                                                            handleDecorChange(
+                                                            handleItemChange(
                                                                 index,
                                                                 "quantity",
                                                                 e.target.value
@@ -395,83 +540,107 @@ function ExpensesPage() {
                                                         placeholder="Miqdor"
                                                     />
                                                 </td>
+                                            )}
+
+                                            {isIngredients && (
                                                 <td>
                                                     <input
                                                         className="input"
                                                         type="number"
                                                         min="0"
-                                                        value={row.total_price}
+                                                        step="1"
+                                                        value={row.unit_price}
                                                         onChange={(e) =>
-                                                            handleDecorChange(
+                                                            handleItemChange(
                                                                 index,
-                                                                "total_price",
+                                                                "unit_price",
+                                                                e.target.value
+                                                            )
+                                                        }
+                                                        placeholder="Birlik narxi"
+                                                    />
+                                                </td>
+                                            )}
+
+                                            {isIngredients ? (
+                                                <td>
+                                                    {total
+                                                        ? total.toLocaleString(
+                                                            "uz-UZ"
+                                                        ) + " so‘m"
+                                                        : "—"}
+                                                </td>
+                                            ) : (
+                                                <td>
+                                                    <input
+                                                        className="input"
+                                                        type="number"
+                                                        min="0"
+                                                        step="1"
+                                                        value={row.unit_price}
+                                                        onChange={(e) =>
+                                                            handleItemChange(
+                                                                index,
+                                                                "unit_price",
                                                                 e.target.value
                                                             )
                                                         }
                                                         placeholder="Jami summa"
                                                     />
                                                 </td>
-                                                <td>
-                                                    {decorItems.length > 1 && (
-                                                        <button
-                                                            type="button"
-                                                            className="button-primary"
-                                                            style={{
-                                                                padding: "4px 8px",
-                                                                fontSize: 11,
-                                                                boxShadow: "none",
-                                                            }}
-                                                            onClick={() => removeDecorRow(index)}
-                                                        >
-                                                            O‘chirish
-                                                        </button>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                            )}
 
-                            <div
-                                style={{
-                                    marginTop: 10,
-                                    marginBottom: 8,
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
-                                    gap: 8,
-                                }}
-                            >
-                                <div style={{ fontSize: 14 }}>
-                                    Bezaklar bo‘yicha umumiy summa:{" "}
-                                    <strong>
-                                        {decorTotal.toLocaleString("uz-UZ")} so‘m
-                                    </strong>
-                                </div>
+                                            <td>
+                                                {items.length > 1 && (
+                                                    <button
+                                                        type="button"
+                                                        className="button-primary"
+                                                        style={{
+                                                            padding: "4px 8px",
+                                                            fontSize: 11,
+                                                            boxShadow: "none",
+                                                        }}
+                                                        onClick={() =>
+                                                            removeRow(index)
+                                                        }
+                                                    >
+                                                        O‘chirish
+                                                    </button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
 
-                                <button
-                                    type="button"
-                                    className="button-primary"
-                                    style={{ boxShadow: "none" }}
-                                    onClick={addDecorRow}
-                                >
-                                    Qator qo‘shish
-                                </button>
-                            </div>
+                    <div
+                        style={{
+                            marginTop: 10,
+                            marginBottom: 8,
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            gap: 8,
+                        }}
+                    >
+                        <div style={{ fontSize: 14 }}>
+                            Umumiy summa (hisoblangan):{" "}
+                            <strong>
+                                {totalCalculated.toLocaleString("uz-UZ")} so‘m
+                            </strong>
+                        </div>
 
-                            <div style={{ marginTop: 8, marginBottom: 8 }}>
-                                <label>Eslatma (ixtiyoriy)</label>
-                                <textarea
-                                    className="input"
-                                    rows={2}
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    placeholder="Masalan: Tug'ilgan kun bezaklari uchun xarajat..."
-                                />
-                            </div>
-                        </>
-                    )}
+                        <button
+                            type="button"
+                            className="button-primary"
+                            style={{ boxShadow: "none" }}
+                            onClick={addRow}
+                        >
+                            Qator qo‘shish
+                        </button>
+                    </div>
 
                     <div
                         style={{
@@ -481,11 +650,15 @@ function ExpensesPage() {
                             gap: 8,
                         }}
                     >
-                        <button className="button-primary" type="submit" disabled={saving}>
+                        <button
+                            className="button-primary"
+                            type="submit"
+                            disabled={saving}
+                        >
                             {saving
                                 ? "Saqlanmoqda..."
                                 : editingId
-                                    ? "O'zgartirishni saqlash"
+                                    ? "O‘zgartirishni saqlash"
                                     : "Xarajatni saqlash"}
                         </button>
 
@@ -508,7 +681,7 @@ function ExpensesPage() {
                 </form>
             </div>
 
-            {/* Pastdagi jadval – tanlangan type bo'yicha */}
+            {/* RO'YXAT */}
             <div className="card" style={{ marginTop: 16 }}>
                 <div
                     style={{
@@ -519,7 +692,7 @@ function ExpensesPage() {
                     }}
                 >
                     <div className="card-title" style={{ marginBottom: 0 }}>
-                        {typeLabel} xarajatlari
+                        {typeLabel} bo‘yicha so‘nggi xarajatlar
                     </div>
                     <div style={{ fontSize: 13, opacity: 0.85 }}>
                         Jami: <strong>{expenses.length}</strong> ta yozuv
@@ -536,49 +709,46 @@ function ExpensesPage() {
                             <thead>
                                 <tr>
                                     <th>SANA</th>
+                                    <th>NOMLAR</th>
                                     <th>UMUMIY SUMMA</th>
-                                    {type === TYPE_DECOR && <th>MAHSULOTLAR</th>}
-                                    <th>IZOH</th>
-                                    <th style={{ width: 120 }}>AMALLAR</th>
+                                    <th style={{ width: 140 }}>AMALLAR</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {expenses.map((exp) => {
-                                    // decor bo'lsa mahsulotlar stringini tayyorlaymiz
-                                    let productsSummary = "-";
-                                    if (
-                                        type === TYPE_DECOR &&
+                                    const itemsSummary =
                                         Array.isArray(exp.items) &&
-                                        exp.items.length > 0
-                                    ) {
-                                        productsSummary = exp.items
-                                            .map((it) => {
-                                                const name = it.name || "Noma'lum";
-                                                const qty =
-                                                    typeof it.quantity === "number" && it.quantity > 0
-                                                        ? ` (${it.quantity})`
-                                                        : "";
-                                                return name + qty;
-                                            })
-                                            .join(", ");
-                                    }
+                                            exp.items.length > 0
+                                            ? exp.items
+                                                .map(
+                                                    (it) =>
+                                                        it.name ||
+                                                        it.product_name ||
+                                                        ""
+                                                )
+                                                .filter(Boolean)
+                                                .join(", ")
+                                            : "-";
 
                                     return (
                                         <tr key={exp.id}>
                                             <td>{exp.expense_date}</td>
+                                            <td>{itemsSummary}</td>
                                             <td>
-                                                {typeof exp.total_amount === "number"
-                                                    ? exp.total_amount.toLocaleString("uz-UZ")
+                                                {typeof exp.total_amount ===
+                                                    "number"
+                                                    ? exp.total_amount.toLocaleString(
+                                                        "uz-UZ"
+                                                    )
                                                     : "-"}
                                             </td>
-                                            {type === TYPE_DECOR && <td>{productsSummary}</td>}
-                                            <td>{exp.description || "-"}</td>
                                             <td>
                                                 <div
                                                     style={{
                                                         display: "flex",
                                                         gap: 6,
-                                                        justifyContent: "flex-start",
+                                                        justifyContent:
+                                                            "flex-start",
                                                     }}
                                                 >
                                                     <button
@@ -589,7 +759,9 @@ function ExpensesPage() {
                                                             fontSize: 11,
                                                             boxShadow: "none",
                                                         }}
-                                                        onClick={() => handleEdit(exp)}
+                                                        onClick={() =>
+                                                            handleEdit(exp)
+                                                        }
                                                     >
                                                         Edit
                                                     </button>
@@ -600,9 +772,12 @@ function ExpensesPage() {
                                                             padding: "3px 8px",
                                                             fontSize: 11,
                                                             boxShadow: "none",
-                                                            background: "#dc2626",
+                                                            background:
+                                                                "#dc2626",
                                                         }}
-                                                        onClick={() => handleDelete(exp)}
+                                                        onClick={() =>
+                                                            handleDelete(exp)
+                                                        }
                                                     >
                                                         Delete
                                                     </button>

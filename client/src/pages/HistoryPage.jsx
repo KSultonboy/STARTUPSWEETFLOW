@@ -1,9 +1,33 @@
+// client/src/pages/HistoryPage.jsx
 import React, { useEffect, useState } from "react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
+function formatTypeLabel(type) {
+    if (!type) return "—";
+    switch (type) {
+        case "sales":
+            return "Sotuv";
+        case "transfer":
+            return "Transfer";
+        case "production":
+            return "Ishlab chiqarish";
+        case "return":
+            return "Vazvrat";
+        default:
+            return type;
+    }
+}
+
+function formatAmount(amount) {
+    if (amount == null) return "—";
+    const num = Number(amount);
+    if (!Number.isFinite(num)) return "—";
+    return num.toLocaleString("uz-UZ") + " so‘m";
+}
+
 function HistoryPage() {
-    const { user } = useAuth(); // { id, role, branch_id }
+    const { user } = useAuth(); // { id, role, branch_id, branch_name }
 
     const isAdmin = user?.role === "admin";
     const isProduction = user?.role === "production";
@@ -22,9 +46,8 @@ function HistoryPage() {
         try {
             setLoading(true);
 
-            let params = {};
+            const params = {};
 
-            // 🔵 ADMIN KO‘RINISHI
             if (isAdmin) {
                 if (typeFilter !== "all") params.type = typeFilter;
                 if (branchFilter !== "all") params.branch_id = branchFilter;
@@ -32,15 +55,13 @@ function HistoryPage() {
                 if (toDate) params.to = toDate;
             }
 
-            // 🟣 PRODUCTION USER → faqat ishlab chiqarish tarixi
             if (isProduction) {
                 params.type = "production";
             }
 
-            // 🟢 SALES USER → faqat o‘z filialining sotuvlari
             if (isSales) {
                 params.type = "sales";
-                params.branch_id = user.branch_id; // boshqasi ko‘rinmaydi
+                params.branch_id = user.branch_id;
             }
 
             const res = await api.get("/history/activities", { params });
@@ -54,37 +75,46 @@ function HistoryPage() {
 
     useEffect(() => {
         loadHistory();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [typeFilter, branchFilter, fromDate, toDate]);
 
     return (
         <div className="page">
             <h1 className="page-title">Umumiy tarix</h1>
 
-            {/* ------------------------- 
-          ADMIN BO‘LSA FILTERLAR
-      ------------------------- */}
+            {/* ADMIN FILTERLAR */}
             {isAdmin && (
-                <div className="filters" style={{ display: "flex", gap: 12 }}>
+                <div
+                    className="filters"
+                    style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: 12,
+                        marginBottom: 12,
+                    }}
+                >
                     <select
                         className="input"
                         value={typeFilter}
                         onChange={(e) => setTypeFilter(e.target.value)}
                     >
-                        <option value="all">Barchasi</option>
+                        <option value="all">Turlar: barchasi</option>
                         <option value="sales">Sotuv</option>
                         <option value="transfer">Transfer</option>
                         <option value="production">Ishlab chiqarish</option>
+                        <option value="return">Vazvrat</option>
                     </select>
 
+                    {/* Agar sendan branchlar ro‘yxatini olish kerak bo‘lsa,
+              keyin alohida branchlar API’sidan yuklab, shu yerda map qilamiz.
+              Hozircha filter strukturasi tayyor tursin. */}
                     <select
                         className="input"
                         value={branchFilter}
                         onChange={(e) => setBranchFilter(e.target.value)}
                     >
-                        <option value="all">Barchasi</option>
-                        {/* Markaziy omborni chiqarib tashlaymiz */}
-                        {/* Faqat use_central_stock = 0 bo‘lgan filiallar */}
-                        {/* Branchlar API’da kelgan bo‘lsa */}
+                        <option value="all">Filiallar: barchasi</option>
+                        {/* <option value="1">Chilonzor</option> ... */}
                     </select>
 
                     <input
@@ -107,18 +137,13 @@ function HistoryPage() {
                 </div>
             )}
 
-            {/* ------------------------- 
-          PRODUCTION USER – FILTRLARSIZ
-      ------------------------- */}
             {isProduction && (
                 <p className="info">
-                    Siz ishlab chiqarish bo‘limi xodimisiz. Faqat ishlab chiqarish tarixi ko‘rinadi.
+                    Siz ishlab chiqarish bo‘limi xodimisiz. Faqat ishlab chiqarish tarixi
+                    ko‘rinadi.
                 </p>
             )}
 
-            {/* ------------------------- 
-          SALES USER – FILTRLARSIZ
-      ------------------------- */}
             {isSales && (
                 <p className="info">
                     Siz <b>{user.branch_name}</b> filialining sotuvlarini ko‘ryapsiz.
@@ -152,13 +177,13 @@ function HistoryPage() {
                                     </tr>
                                 ) : (
                                     items.map((row, i) => (
-                                        <tr key={row.id}>
+                                        <tr key={`${row.type}-${row.id}-${row.activity_date}`}>
                                             <td>{i + 1}</td>
                                             <td>{row.activity_date}</td>
-                                            <td>{row.type}</td>
+                                            <td>{formatTypeLabel(row.type)}</td>
                                             <td>{row.branch_name || "—"}</td>
                                             <td>{row.description || "—"}</td>
-                                            <td>{row.amount || "—"}</td>
+                                            <td>{formatAmount(row.amount)}</td>
                                             <td>{row.status || "—"}</td>
                                         </tr>
                                     ))

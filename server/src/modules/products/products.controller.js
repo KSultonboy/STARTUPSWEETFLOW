@@ -20,6 +20,16 @@ async function getDecorationProducts(req, res) {
     }
 }
 
+async function getUtilityProducts(req, res) {
+    try {
+        const products = await service.getUtilityProducts();
+        res.json(products);
+    } catch (err) {
+        console.error('getUtilityProducts error:', err);
+        res.status(500).json({ message: 'Server xatosi' });
+    }
+}
+
 async function createProduct(req, res) {
     try {
         const product = await service.createProduct(req.body);
@@ -67,6 +77,7 @@ async function deleteProduct(req, res) {
 module.exports = {
     getAllProducts,
     getDecorationProducts,
+    getUtilityProducts,
     createProduct,
     updateProduct,
     deleteProduct,

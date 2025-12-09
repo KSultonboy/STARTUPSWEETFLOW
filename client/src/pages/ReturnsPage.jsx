@@ -1,3 +1,4 @@
+// client/src/pages/ReturnsPage.jsx
 import React, { useEffect, useState } from "react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -8,6 +9,8 @@ function statusBadgeClass(status) {
             return "badge-warning";
         case "APPROVED":
             return "badge-success";
+        case "CANCELED":
+            return "badge-danger";
         default:
             return "badge-secondary";
     }
@@ -19,6 +22,8 @@ function statusLabel(status) {
             return "Kutilmoqda";
         case "APPROVED":
             return "Qabul qilingan";
+        case "CANCELED":
+            return "Bekor qilingan";
         default:
             return status || "—";
     }
@@ -59,6 +64,7 @@ function ReturnsPage() {
     const [selectedReturn, setSelectedReturn] = useState(null);
     const [loadingDetail, setLoadingDetail] = useState(false);
     const [approving, setApproving] = useState(false);
+    const [itemActionLoading, setItemActionLoading] = useState(false);
 
     const loadBranches = async () => {
         if (!isAdmin) return;
@@ -152,6 +158,13 @@ function ReturnsPage() {
             return;
         }
 
+        if (!user?.branch_id) {
+            setError(
+                "Profilga filial biriktirilmagan. Iltimos, admin bilan bog‘laning."
+            );
+            return;
+        }
+
         if (items.length === 0) {
             setError("Kamida bitta mahsulot kiriting.");
             return;
@@ -180,6 +193,7 @@ function ReturnsPage() {
                 date,
                 comment: comment || "",
                 items: preparedItems,
+                branch_id: user.branch_id || null,
             };
 
             await api.post("/returns", payload);
@@ -203,6 +217,7 @@ function ReturnsPage() {
         if (!isAdmin) return;
         setSelectedReturn(null);
         setLoadingDetail(true);
+        setError("");
         try {
             const res = await api.get(`/returns/${row.id}`);
             setSelectedReturn(res.data);
@@ -214,13 +229,23 @@ function ReturnsPage() {
         }
     };
 
+    const reloadDetail = async (id) => {
+        try {
+            const res = await api.get(`/returns/${id}`);
+            setSelectedReturn(res.data);
+        } catch (err) {
+            console.error(err);
+            setError("Qaytish ma’lumotini qayta yuklashda xatolik.");
+        }
+    };
+
     const approveSelected = async () => {
         if (!selectedReturn) return;
         setApproving(true);
         setError("");
         try {
             await api.post(`/returns/${selectedReturn.header.id}/approve`);
-            setSuccess("Vazvrat qabul qilindi va omborga o'tkazildi.");
+            setSuccess("Barcha kutilayotgan mahsulotlar qabul qilindi.");
             setSelectedReturn(null);
             await loadReturns();
         } catch (err) {
@@ -231,6 +256,50 @@ function ReturnsPage() {
             setError(msg);
         } finally {
             setApproving(false);
+        }
+    };
+
+    const approveItem = async (item) => {
+        if (!selectedReturn) return;
+        setItemActionLoading(true);
+        setError("");
+        try {
+            await api.post(
+                `/returns/${selectedReturn.header.id}/items/${item.id}/approve`
+            );
+            setSuccess("Mahsulot qabul qilindi.");
+            await reloadDetail(selectedReturn.header.id);
+            await loadReturns();
+        } catch (err) {
+            console.error(err);
+            const msg =
+                err?.response?.data?.message ||
+                "Mahsulotni tasdiqlashda xatolik.";
+            setError(msg);
+        } finally {
+            setItemActionLoading(false);
+        }
+    };
+
+    const cancelItem = async (item) => {
+        if (!selectedReturn) return;
+        setItemActionLoading(true);
+        setError("");
+        try {
+            await api.post(
+                `/returns/${selectedReturn.header.id}/items/${item.id}/cancel`
+            );
+            setSuccess("Mahsulot vazvrati bekor qilindi.");
+            await reloadDetail(selectedReturn.header.id);
+            await loadReturns();
+        } catch (err) {
+            console.error(err);
+            const msg =
+                err?.response?.data?.message ||
+                "Mahsulotni bekor qilishda xatolik.";
+            setError(msg);
+        } finally {
+            setItemActionLoading(false);
         }
     };
 
@@ -273,6 +342,7 @@ function ReturnsPage() {
                         >
                             <option value="PENDING">Faqat kutilayotgan</option>
                             <option value="APPROVED">Faqat qabul qilingan</option>
+                            <option value="CANCELED">Faqat bekor qilingan</option>
                             <option value="all">Barchasi</option>
                         </select>
 
@@ -412,7 +482,11 @@ function ReturnsPage() {
                                                     type="text"
                                                     value={row.reason}
                                                     onChange={(e) =>
-                                                        handleItemChange(index, "reason", e.target.value)
+                                                        handleItemChange(
+                                                            index,
+                                                            "reason",
+                                                            e.target.value
+                                                        )
                                                     }
                                                     placeholder="Sabab (ixtiyoriy)"
                                                 />
@@ -423,6 +497,7 @@ function ReturnsPage() {
                                                         type="button"
                                                         className="btn btn-small btn-danger"
                                                         onClick={() => removeRow(index)}
+                                                        disabled={saving}
                                                     >
                                                         ×
                                                     </button>
@@ -464,7 +539,9 @@ function ReturnsPage() {
                 <div className="card-header">
                     <div>
                         <div className="card-title">
-                            {isAdmin ? "Filiallardan kelayotgan vazvratlar" : "Mening vazvratlarim"}
+                            {isAdmin
+                                ? "Filiallardan kelayotgan vazvratlar"
+                                : "Mening vazvratlarim"}
                         </div>
                         <div className="card-subtitle">
                             So‘nggi yuborilgan va qabul qilingan qaytishlar.
@@ -527,7 +604,10 @@ function ReturnsPage() {
             {/* Admin uchun detal panel / modal */}
             {isAdmin && selectedReturn && (
                 <div className="drawer drawer-right">
-                    <div className="drawer-backdrop" onClick={() => setSelectedReturn(null)} />
+                    <div
+                        className="drawer-backdrop"
+                        onClick={() => setSelectedReturn(null)}
+                    />
                     <div className="drawer-content">
                         <div className="drawer-header">
                             <h2 className="drawer-title">
@@ -546,7 +626,9 @@ function ReturnsPage() {
                         ) : (
                             <>
                                 <div className="drawer-section">
-                                    <div><b>Sana:</b> {selectedReturn.header.return_date}</div>
+                                    <div>
+                                        <b>Sana:</b> {selectedReturn.header.return_date}
+                                    </div>
                                     <div>
                                         <b>Filial:</b>{" "}
                                         {selectedReturn.header.branch_name || "—"}
@@ -578,6 +660,8 @@ function ReturnsPage() {
                                                     <th>Miqdor</th>
                                                     <th>O‘lchov</th>
                                                     <th>Sabab</th>
+                                                    <th>Status</th>
+                                                    <th>Amallar</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -588,6 +672,44 @@ function ReturnsPage() {
                                                         <td>{it.quantity}</td>
                                                         <td>{it.unit || "—"}</td>
                                                         <td>{it.reason || "—"}</td>
+                                                        <td>
+                                                            <span
+                                                                className={`badge ${statusBadgeClass(
+                                                                    it.status
+                                                                )}`}
+                                                            >
+                                                                {statusLabel(it.status)}
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            {selectedReturn.header.status === "PENDING" &&
+                                                                it.status === "PENDING" && (
+                                                                    <div
+                                                                        style={{
+                                                                            display: "flex",
+                                                                            gap: 6,
+                                                                            flexWrap: "wrap",
+                                                                        }}
+                                                                    >
+                                                                        <button
+                                                                            type="button"
+                                                                            className="btn btn-small btn-primary"
+                                                                            onClick={() => approveItem(it)}
+                                                                            disabled={itemActionLoading}
+                                                                        >
+                                                                            Qabul qilish
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            className="btn btn-small btn-secondary"
+                                                                            onClick={() => cancelItem(it)}
+                                                                            disabled={itemActionLoading}
+                                                                        >
+                                                                            Bekor qilish
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -605,11 +727,13 @@ function ReturnsPage() {
                                         }}
                                     >
                                         <button
-                                            className="btn btn-primary"
+                                            className="btn btn-primary btn-small"
                                             onClick={approveSelected}
-                                            disabled={approving}
+                                            disabled={approving || itemActionLoading}
                                         >
-                                            {approving ? "Qabul qilinmoqda..." : "Qabul qilish"}
+                                            {approving
+                                                ? "Qabul qilinmoqda..."
+                                                : "Barchasini qabul qilish"}
                                         </button>
                                     </div>
                                 )}

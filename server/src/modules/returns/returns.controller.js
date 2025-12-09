@@ -57,6 +57,9 @@ async function getReturnById(req, res) {
     }
 }
 
+/**
+ * BARCHA pending itemlarni tasdiqlash
+ */
 async function approveReturn(req, res) {
     try {
         const user = req.user || null;
@@ -72,9 +75,47 @@ async function approveReturn(req, res) {
     }
 }
 
+/**
+ * Bitta itemni tasdiqlash
+ */
+async function approveReturnItem(req, res) {
+    try {
+        const user = req.user || null;
+        const { id, itemId } = req.params;
+
+        await service.approveReturnItem(id, itemId, user);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('approveReturnItem error:', err);
+        res
+            .status(400)
+            .json({ message: err.message || 'Mahsulotni tasdiqlashda xatolik' });
+    }
+}
+
+/**
+ * Bitta itemni bekor qilish
+ */
+async function cancelReturnItem(req, res) {
+    try {
+        const user = req.user || null;
+        const { id, itemId } = req.params;
+
+        await service.cancelReturnItem(id, itemId, user);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('cancelReturnItem error:', err);
+        res
+            .status(400)
+            .json({ message: err.message || 'Mahsulotni bekor qilishda xatolik' });
+    }
+}
+
 module.exports = {
     createReturn,
     listReturns,
     getReturnById,
     approveReturn,
+    approveReturnItem,
+    cancelReturnItem,
 };

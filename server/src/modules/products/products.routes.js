@@ -8,6 +8,9 @@ router.get('/', controller.getAllProducts);
 // GET /api/products/decorations – bezak mahsulotlar
 router.get('/decorations', controller.getDecorationProducts);
 
+// ✅ YANGI: kommunal (UTILITY) mahsulotlar
+router.get('/utilities', controller.getUtilityProducts);
+
 // POST /api/products
 router.post('/', controller.createProduct);
 

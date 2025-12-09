@@ -1,5 +1,4 @@
 const repo = require('./products.repository');
-const { validateProduct } = require('./products.validation');
 
 async function getAllProducts() {
     return repo.findAll();
@@ -9,32 +8,69 @@ async function getDecorationProducts() {
     return repo.findDecorations();
 }
 
+async function getUtilityProducts() {
+    return repo.findUtilities();
+}
+
 async function createProduct(data) {
-    const validData = validateProduct(data);
-    return repo.create(validData);
+    const name = (data.name || '').trim();
+    const unit = (data.unit || '').trim();
+
+    if (!name) {
+        throw new Error('Mahsulot nomi majburiy.');
+    }
+    if (!unit) {
+        throw new Error('O‘lchov birligi majburiy.');
+    }
+
+    const payload = {
+        name,
+        unit,
+        category: data.category || 'PRODUCT', // PRODUCT / DECORATION / UTILITY
+        price: Number(data.price) || 0,
+        wholesale_price: Number(data.wholesale_price) || 0,
+    };
+
+    return repo.create(payload);
 }
 
 async function updateProduct(id, data) {
-    const validData = validateProduct(data);
-    const existing = await repo.findById(id);
-    if (!existing) {
-        throw new Error('Mahsulot topilmadi');
+    if (!id) {
+        throw new Error('Noto‘g‘ri mahsulot ID');
     }
-    return repo.update(id, validData);
+
+    const name = (data.name || '').trim();
+    const unit = (data.unit || '').trim();
+
+    if (!name) {
+        throw new Error('Mahsulot nomi majburiy.');
+    }
+    if (!unit) {
+        throw new Error('O‘lchov birligi majburiy.');
+    }
+
+    const payload = {
+        name,
+        unit,
+        category: data.category || 'PRODUCT',
+        price: Number(data.price) || 0,
+        wholesale_price: Number(data.wholesale_price) || 0,
+    };
+
+    return repo.update(id, payload);
 }
 
 async function deleteProduct(id) {
-    const existing = await repo.findById(id);
-    if (!existing) {
-        throw new Error('Mahsulot topilmadi');
+    if (!id) {
+        throw new Error('Noto‘g‘ri mahsulot ID');
     }
     await repo.remove(id);
-    return;
 }
 
 module.exports = {
     getAllProducts,
     getDecorationProducts,
+    getUtilityProducts,
     createProduct,
     updateProduct,
     deleteProduct,

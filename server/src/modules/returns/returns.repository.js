@@ -3,8 +3,9 @@ const { run, get, all } = require('../../db/connection');
 /**
  * Yangi qaytish (vazvrat) yozish:
  *  - returns (status = PENDING)
- *  - return_items
- *  Ombor harakatlari hali YO‘Q – faqat admin tasdiqlaganda yoziladi.
+ *  - return_items (status = PENDING)
+ *  - warehouse_movements:
+ *      * filial omboridan OUT (rezerv) — APPROVE/CANCEL paytida yana harakat bo'ladi
  */
 async function createReturn({ branchId, date, comment, items, userId }) {
     const returnDate = date || new Date().toISOString().slice(0, 10);
@@ -23,14 +24,14 @@ async function createReturn({ branchId, date, comment, items, userId }) {
 
         const returnId = result.lastID;
 
-        // 2) return_items
+        // 2) return_items + filial OUT (rezerv)
         for (const item of items) {
             const qty = Number(item.quantity);
 
             await run(
                 `
-          INSERT INTO return_items (return_id, product_id, quantity, unit, reason)
-          VALUES (?, ?, ?, ?, ?)
+          INSERT INTO return_items (return_id, product_id, quantity, unit, reason, status)
+          VALUES (?, ?, ?, ?, ?, 'PENDING')
         `,
                 [
                     returnId,
@@ -39,6 +40,15 @@ async function createReturn({ branchId, date, comment, items, userId }) {
                     item.unit || null,
                     item.reason || null,
                 ]
+            );
+
+            // Filial omboridan OUT (rezerv)
+            await run(
+                `
+          INSERT INTO warehouse_movements (product_id, branch_id, movement_type, source_type, source_id, quantity)
+          VALUES (?, ?, 'OUT', 'RETURN', ?, ?)
+        `,
+                [item.product_id, branchId, returnId, qty]
             );
         }
 
@@ -69,7 +79,7 @@ async function createReturn({ branchId, date, comment, items, userId }) {
 }
 
 /**
- * Qaytishlar ro‘yxati
+ * Qaytishlar ro‘yxati (header + agregatlar)
  */
 async function listReturns({ branchId, status, dateFrom, dateTo, limit, offset }) {
     const params = [];
@@ -155,7 +165,8 @@ async function getReturnById(id) {
         p.name AS product_name,
         ri.quantity,
         ri.unit,
-        ri.reason
+        ri.reason,
+        ri.status
       FROM return_items ri
       JOIN products p ON p.id = ri.product_id
       WHERE ri.return_id = ?
@@ -168,13 +179,52 @@ async function getReturnById(id) {
 }
 
 /**
- * Admin qaytishni tasdiqlaydi:
- *  - returns.status = 'APPROVED'
- *  - warehouse_movements:
- *      * filial omboridan OUT
- *      * markaziy omborga IN (branch_id = NULL)
+ * Ichki helper: itemlar statusiga qarab returns.status ni yangilash
+ *  - agar kamida bitta PENDING bo'lsa => PENDING
+ *  - agar kamida bitta APPROVED bo'lsa => APPROVED
+ *  - aks holda (hammasi CANCELED) => CANCELED
  */
-async function approveReturn(id, adminId) {
+async function recalcReturnStatus(returnId) {
+    const items = await all(
+        `
+      SELECT status
+      FROM return_items
+      WHERE return_id = ?
+    `,
+        [returnId]
+    );
+
+    if (!items || items.length === 0) {
+        await run(
+            `UPDATE returns SET status = 'CANCELED' WHERE id = ?`,
+            [returnId]
+        );
+        return;
+    }
+
+    const hasPending = items.some((x) => x.status === 'PENDING');
+    const hasApproved = items.some((x) => x.status === 'APPROVED');
+
+    let newStatus = 'CANCELED';
+    if (hasPending) {
+        newStatus = 'PENDING';
+    } else if (hasApproved) {
+        newStatus = 'APPROVED';
+    }
+
+    await run(
+        `UPDATE returns SET status = ? WHERE id = ?`,
+        [newStatus, returnId]
+    );
+}
+
+/**
+ * Admin BARCHA PENDING itemlarni tasdiqlaydi:
+ *  - markaziy omborga IN
+ *  - item.status = APPROVED
+ *  - returns.status qayta hisoblanadi
+ */
+async function approveReturnAllPending(id, adminId) {
     await run('BEGIN TRANSACTION');
 
     try {
@@ -194,37 +244,30 @@ async function approveReturn(id, adminId) {
             throw new Error('Qaytish topilmadi.');
         }
 
-        if (header.status !== 'PENDING') {
-            throw new Error('Faqat PENDING holatidagi qaytish tasdiqlanadi.');
-        }
-
+        // PENDING bo'lsa yaxshi, APPROVED/CANCELED ham bo'lishi mumkin,
+        // biz faqat PENDING itemlarga tegamiz.
         const items = await all(
             `
         SELECT
+          ri.id,
           ri.product_id,
-          ri.quantity
+          ri.quantity,
+          ri.status
         FROM return_items ri
         WHERE ri.return_id = ?
       `,
             [id]
         );
 
-        if (!items || items.length === 0) {
-            throw new Error('Qaytishda hech qanday mahsulot yo‘q.');
+        const pendingItems = items.filter((it) => it.status === 'PENDING');
+
+        if (!pendingItems.length) {
+            // Tasdiqlanadigan item yo'q — bu xato emas, lekin foydalanuvchiga aytamiz
+            throw new Error('Tasdiqlanadigan mahsulot yo‘q.');
         }
 
-        // Ombor harakatlari
-        for (const it of items) {
+        for (const it of pendingItems) {
             const qty = Number(it.quantity);
-
-            // Filial omboridan OUT
-            await run(
-                `
-          INSERT INTO warehouse_movements (product_id, branch_id, movement_type, source_type, source_id, quantity)
-          VALUES (?, ?, 'OUT', 'RETURN', ?, ?)
-        `,
-                [it.product_id, header.branch_id, header.id, qty]
-            );
 
             // Markaziy omborga IN (branch_id = NULL)
             await run(
@@ -232,19 +275,172 @@ async function approveReturn(id, adminId) {
           INSERT INTO warehouse_movements (product_id, branch_id, movement_type, source_type, source_id, quantity)
           VALUES (?, NULL, 'IN', 'RETURN', ?, ?)
         `,
-                [it.product_id, header.id, header.id, qty]
+                [it.product_id, header.id, qty]
+            );
+
+            // Item status = APPROVED
+            await run(
+                `
+          UPDATE return_items
+          SET status = 'APPROVED'
+          WHERE id = ?
+        `,
+                [it.id]
             );
         }
 
-        // returns.status = APPROVED
+        await recalcReturnStatus(id);
+
+        await run('COMMIT');
+    } catch (err) {
+        await run('ROLLBACK');
+        throw err;
+    }
+}
+
+/**
+ * Bitta itemni APPROVE qilish (admin)
+ *  - markaziy omborga IN
+ *  - item.status = APPROVED
+ *  - returns.status qayta hisoblanadi
+ */
+async function approveReturnItem(returnId, itemId, adminId) {
+    await run('BEGIN TRANSACTION');
+
+    try {
+        const header = await get(
+            `
+        SELECT
+          r.id,
+          r.branch_id,
+          r.status
+        FROM returns r
+        WHERE r.id = ?
+      `,
+            [returnId]
+        );
+
+        if (!header) {
+            throw new Error('Qaytish topilmadi.');
+        }
+
+        const item = await get(
+            `
+        SELECT
+          ri.id,
+          ri.product_id,
+          ri.quantity,
+          ri.status
+        FROM return_items ri
+        WHERE ri.id = ? AND ri.return_id = ?
+      `,
+            [itemId, returnId]
+        );
+
+        if (!item) {
+            throw new Error('Mahsulot bandi topilmadi.');
+        }
+
+        if (item.status !== 'PENDING') {
+            throw new Error('Bu mahsulot allaqachon qayta ishlangan.');
+        }
+
+        const qty = Number(item.quantity);
+
         await run(
             `
-        UPDATE returns
+        INSERT INTO warehouse_movements (product_id, branch_id, movement_type, source_type, source_id, quantity)
+        VALUES (?, NULL, 'IN', 'RETURN', ?, ?)
+      `,
+            [item.product_id, header.id, qty]
+        );
+
+        await run(
+            `
+        UPDATE return_items
         SET status = 'APPROVED'
         WHERE id = ?
       `,
-            [id]
+            [item.id]
         );
+
+        await recalcReturnStatus(returnId);
+
+        await run('COMMIT');
+    } catch (err) {
+        await run('ROLLBACK');
+        throw err;
+    }
+}
+
+/**
+ * Bitta itemni CANCEL qilish (admin)
+ *  - filial omboriga IN (rezervni qaytarish)
+ *  - item.status = CANCELED
+ *  - returns.status qayta hisoblanadi
+ */
+async function cancelReturnItem(returnId, itemId, adminId) {
+    await run('BEGIN TRANSACTION');
+
+    try {
+        const header = await get(
+            `
+        SELECT
+          r.id,
+          r.branch_id,
+          r.status
+        FROM returns r
+        WHERE r.id = ?
+      `,
+            [returnId]
+        );
+
+        if (!header) {
+            throw new Error('Qaytish topilmadi.');
+        }
+
+        const item = await get(
+            `
+        SELECT
+          ri.id,
+          ri.product_id,
+          ri.quantity,
+          ri.status
+        FROM return_items ri
+        WHERE ri.id = ? AND ri.return_id = ?
+      `,
+            [itemId, returnId]
+        );
+
+        if (!item) {
+            throw new Error('Mahsulot bandi topilmadi.');
+        }
+
+        if (item.status !== 'PENDING') {
+            throw new Error('Bu mahsulot allaqachon qayta ishlangan.');
+        }
+
+        const qty = Number(item.quantity);
+
+        // Filial omboriga IN (rezervni qaytarish)
+        await run(
+            `
+        INSERT INTO warehouse_movements (product_id, branch_id, movement_type, source_type, source_id, quantity)
+        VALUES (?, ?, 'IN', 'RETURN_CANCEL', ?, ?)
+      `,
+            [item.product_id, header.branch_id, header.id, qty]
+        );
+
+        await run(
+            `
+        UPDATE return_items
+        SET status = 'CANCELED'
+        WHERE id = ?
+      `,
+            [item.id]
+        );
+
+        await recalcReturnStatus(returnId);
 
         await run('COMMIT');
     } catch (err) {
@@ -257,5 +453,7 @@ module.exports = {
     createReturn,
     listReturns,
     getReturnById,
-    approveReturn,
+    approveReturnAllPending,
+    approveReturnItem,
+    cancelReturnItem,
 };

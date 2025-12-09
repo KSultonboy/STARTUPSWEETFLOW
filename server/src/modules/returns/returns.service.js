@@ -43,9 +43,8 @@ async function createReturn(payload, user) {
     let branchId = null;
 
     if (user.role === 'branch') {
-        branchId = user.branch_id;
+        branchId = user.branch_id || payload.branch_id || null;
     } else if (user.role === 'admin') {
-        // Agar kelajakda admin ham qaytish yaratmoqchi bo'lsa:
         branchId = payload.branch_id || null;
     }
 
@@ -77,7 +76,7 @@ async function listReturns(filters, user) {
     let status = null;
 
     if (user && user.role === 'branch') {
-        branchId = user.branch_id;
+        branchId = user.branch_id || null;
     } else if (user && user.role === 'admin') {
         if (filters.branch_id && filters.branch_id !== 'all') {
             branchId = filters.branch_id;
@@ -117,14 +116,36 @@ async function getReturnById(id, user) {
 }
 
 /**
- * Admin qaytishni tasdiqlaydi (omborga o'tkazadi)
+ * Admin BARCHA PENDING itemlarni tasdiqlaydi
  */
 async function approveReturn(id, user) {
     if (!user || user.role !== 'admin') {
         throw new Error('Faqat admin qaytishni tasdiqlashi mumkin.');
     }
 
-    await repo.approveReturn(id, user.id);
+    await repo.approveReturnAllPending(id, user.id);
+}
+
+/**
+ * Admin bitta itemni tasdiqlaydi
+ */
+async function approveReturnItem(id, itemId, user) {
+    if (!user || user.role !== 'admin') {
+        throw new Error('Faqat admin mahsulotni tasdiqlashi mumkin.');
+    }
+
+    await repo.approveReturnItem(id, itemId, user.id);
+}
+
+/**
+ * Admin bitta itemni bekor qiladi
+ */
+async function cancelReturnItem(id, itemId, user) {
+    if (!user || user.role !== 'admin') {
+        throw new Error('Faqat admin mahsulotni bekor qilishi mumkin.');
+    }
+
+    await repo.cancelReturnItem(id, itemId, user.id);
 }
 
 module.exports = {
@@ -132,4 +153,6 @@ module.exports = {
     listReturns,
     getReturnById,
     approveReturn,
+    approveReturnItem,
+    cancelReturnItem,
 };
