@@ -5,6 +5,7 @@ const { run, get, all } = require("../../db/connection");
 /**
  * Bitta transferni id bo'yicha, itemlari bilan qaytarish
  */
+
 async function findById(id) {
     const transfer = await get(
         `
@@ -19,7 +20,8 @@ async function findById(id) {
       t.created_at,
       t.updated_at,
       bfrom.name AS from_branch_name,
-      bto.name   AS to_branch_name
+      bto.name   AS to_branch_name,
+      IFNULL(bto.type, 'BRANCH') AS to_branch_type
     FROM transfers t
     LEFT JOIN branches bfrom ON bfrom.id = t.from_branch_id
     LEFT JOIN branches bto   ON bto.id = t.to_branch_id
@@ -51,6 +53,10 @@ async function findById(id) {
     return { ...transfer, items };
 }
 
+
+/**
+ * Barcha transferlar (admin uchun)
+ */
 /**
  * Barcha transferlar (admin uchun)
  */
@@ -68,7 +74,8 @@ async function findAll() {
       t.created_at,
       t.updated_at,
       bfrom.name AS from_branch_name,
-      bto.name   AS to_branch_name
+      bto.name   AS to_branch_name,
+      IFNULL(bto.type, 'BRANCH') AS to_branch_type
     FROM transfers t
     LEFT JOIN branches bfrom ON bfrom.id = t.from_branch_id
     LEFT JOIN branches bto   ON bto.id = t.to_branch_id
@@ -100,6 +107,7 @@ async function findAll() {
 
     return result;
 }
+
 
 /**
  * Yangi transfer yaratish:

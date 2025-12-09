@@ -1,27 +1,34 @@
-const repo = require('./branches.repository');
+const repo = require("./branches.repository");
 
 /**
- * Yangi / yangilangan filial inputini tekshirish
+ * Yangi / yangilangan filial/do'kon inputini tekshirish
  */
 function validateBranchInput(data) {
-    if (!data || typeof data !== 'object') {
-        throw new Error('Filial ma’lumotlari kiritilmadi.');
+    if (!data || typeof data !== "object") {
+        throw new Error("Filial/do‘kon ma’lumotlari kiritilmadi.");
     }
 
     if (!data.name || !String(data.name).trim()) {
-        throw new Error('Filial nomi majburiy.');
+        throw new Error("Nomi majburiy.");
     }
 
+    const type = (data.type || "BRANCH").toString().toUpperCase();
+    if (!["BRANCH", "OUTLET"].includes(type)) {
+        throw new Error("Turi noto‘g‘ri (BRANCH yoki OUTLET bo‘lishi kerak).");
+    }
+
+    // faqat filial uchun use_central_stock ni tekshiramiz
     if (
+        type === "BRANCH" &&
         data.use_central_stock != null &&
-        ![0, 1, '0', '1', true, false].includes(data.use_central_stock)
+        ![0, 1, "0", "1", true, false].includes(data.use_central_stock)
     ) {
-        throw new Error('use_central_stock noto‘g‘ri qiymat qabul qildi.');
+        throw new Error("use_central_stock noto‘g‘ri qiymat qabul qildi.");
     }
 }
 
 /**
- * Barcha filiallar
+ * Barcha filiallar/do'konlar
  */
 async function getBranches() {
     const branches = await repo.getAllBranches();
@@ -29,21 +36,38 @@ async function getBranches() {
 }
 
 /**
- * Yangi filial yaratish
+ * Yangi filial/do'kon yaratish
  */
 async function createBranch(data) {
     validateBranchInput(data);
 
-    const payload = {
-        name: String(data.name).trim(),
-        is_active:
-            data.is_active != null
-                ? Number(data.is_active) ? 1 : 0
-                : 1,
-        use_central_stock:
+    const type = (data.type || "BRANCH").toString().toUpperCase() === "OUTLET"
+        ? "OUTLET"
+        : "BRANCH";
+
+    const baseName = String(data.name).trim();
+
+    const isActive =
+        data.is_active != null ? (Number(data.is_active) ? 1 : 0) : 1;
+
+    let useCentralStock = 0;
+    if (type === "BRANCH") {
+        useCentralStock =
             data.use_central_stock != null
-                ? Number(data.use_central_stock) ? 1 : 0
-                : 0,
+                ? Number(data.use_central_stock)
+                    ? 1
+                    : 0
+                : 0;
+    } else {
+        // OUTLET – har doim markaziy ombor bilan bog‘liq emas, ombor yuritmaymiz
+        useCentralStock = 0;
+    }
+
+    const payload = {
+        name: baseName,
+        is_active: isActive,
+        use_central_stock: useCentralStock,
+        type,
     };
 
     const created = await repo.createBranch(payload);
@@ -51,23 +75,53 @@ async function createBranch(data) {
 }
 
 /**
- * Filialni yangilash
+ * Filial/do'konni yangilash
  */
 async function updateBranch(id, data) {
-    validateBranchInput({
+    // Avval mavjud yozuvni olib, type ni ham bilib olamiz
+    const existing = await repo.getBranchById(id);
+    if (!existing) {
+        throw new Error("Filial/do‘kon topilmadi.");
+    }
+
+    const merged = {
+        ...existing,
         ...data,
-        name: data.name ?? '', // nomini tekshiramiz
-    });
+        name: data.name != null ? data.name : existing.name,
+        type: data.type != null ? data.type : existing.type,
+    };
+
+    validateBranchInput(merged);
+
+    const type =
+        (merged.type || "BRANCH").toString().toUpperCase() === "OUTLET"
+            ? "OUTLET"
+            : "BRANCH";
+
+    const name = String(merged.name).trim();
+
+    const isActive =
+        merged.is_active != null
+            ? Number(merged.is_active)
+                ? 1
+                : 0
+            : existing.is_active;
+
+    let useCentralStock = existing.use_central_stock;
+    if (type === "BRANCH") {
+        if (merged.use_central_stock != null) {
+            useCentralStock = Number(merged.use_central_stock) ? 1 : 0;
+        }
+    } else {
+        // OUTLET – har doim 0
+        useCentralStock = 0;
+    }
 
     const payload = {
-        name: String(data.name).trim(),
-        // is_active opsional
-        ...(data.is_active != null && {
-            is_active: Number(data.is_active) ? 1 : 0,
-        }),
-        ...(data.use_central_stock != null && {
-            use_central_stock: Number(data.use_central_stock) ? 1 : 0,
-        }),
+        name,
+        is_active: isActive,
+        use_central_stock: useCentralStock,
+        type,
     };
 
     const updated = await repo.updateBranch(id, payload);
@@ -75,7 +129,7 @@ async function updateBranch(id, data) {
 }
 
 /**
- * Filialni o'chirish (soft delete)
+ * Filial/do'konni o'chirish (soft delete)
  */
 async function deleteBranch(id) {
     const result = await repo.deleteBranch(id);

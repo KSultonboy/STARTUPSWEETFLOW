@@ -10,14 +10,17 @@ const STATUS_LABELS = {
 };
 
 const STATUS_COLORS = {
-    PENDING: "#f59e0b",   // orange
-    PARTIAL: "#eab308",   // yellow
+    PENDING: "#f59e0b", // orange
+    PARTIAL: "#eab308", // yellow
     COMPLETED: "#22c55e", // green
     CANCELLED: "#ef4444", // red
 };
 
 function TransfersPage() {
     const { user } = useAuth();
+
+    // Rejim: BRANCH (filiallar) | OUTLET (do'konlar)
+    const [mode, setMode] = useState("BRANCH");
 
     const [transferDate, setTransferDate] = useState(() => {
         const now = new Date();
@@ -35,12 +38,13 @@ function TransfersPage() {
     const [transfers, setTransfers] = useState([]);
     const [selectedTransferId, setSelectedTransferId] = useState(null);
 
-    const [filterBranchId, setFilterBranchId] = useState("all");
+    const [filterToId, setFilterToId] = useState("all");
 
     const [loadingBranches, setLoadingBranches] = useState(false);
     const [loadingProducts, setLoadingProducts] = useState(false);
     const [loadingTransfers, setLoadingTransfers] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [actionLoadingItemId, setActionLoadingItemId] = useState(null);
 
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
@@ -55,6 +59,30 @@ function TransfersPage() {
         [products]
     );
 
+    // Filiallar va do'konlarni ajratamiz
+    const branchOptions = useMemo(
+        () =>
+            (branches || []).filter(
+                (b) =>
+                    (b.type || "BRANCH").toUpperCase() === "BRANCH" &&
+                    b.is_active !== 0
+            ),
+        [branches]
+    );
+
+    const outletOptions = useMemo(
+        () =>
+            (branches || []).filter(
+                (b) =>
+                    (b.type || "BRANCH").toUpperCase() === "OUTLET" &&
+                    b.is_active !== 0
+            ),
+        [branches]
+    );
+
+    const destinationOptions =
+        mode === "BRANCH" ? branchOptions : outletOptions;
+
     const fetchBranches = async () => {
         try {
             setLoadingBranches(true);
@@ -62,7 +90,7 @@ function TransfersPage() {
             setBranches(res.data || []);
         } catch (err) {
             console.error(err);
-            setError("Filiallarni yuklashda xatolik");
+            setError("Filial va do‘konlarni yuklashda xatolik");
         } finally {
             setLoadingBranches(false);
         }
@@ -104,6 +132,8 @@ function TransfersPage() {
         setToBranchId("");
         setNote("");
         setItems([{ product_id: "", quantity: "" }]);
+        setError("");
+        setSuccess("");
     };
 
     const handleItemChange = (index, field, value) => {
@@ -133,7 +163,11 @@ function TransfersPage() {
             .filter((r) => r.product_id && r.quantity > 0);
 
         if (!toBranchId) {
-            setError("Filialni tanlang");
+            setError(
+                mode === "BRANCH"
+                    ? "Filialni tanlang."
+                    : "Do‘kon / supermarketni tanlang."
+            );
             return;
         }
 
@@ -158,7 +192,11 @@ function TransfersPage() {
             const created = res.data;
 
             setTransfers((prev) => [created, ...prev]);
-            setSuccess("Transfer muvaffaqiyatli yaratildi.");
+            setSuccess(
+                mode === "BRANCH"
+                    ? "Filialga transfer muvaffaqiyatli yaratildi."
+                    : "Do‘konga transfer muvaffaqiyatli yaratildi."
+            );
             resetForm();
         } catch (err) {
             console.error(err);
@@ -170,17 +208,32 @@ function TransfersPage() {
         }
     };
 
+    // Rejim bo'yicha transferlarni filter qilamiz
     const filteredTransfers = useMemo(() => {
-        if (filterBranchId === "all") return transfers;
-        return transfers.filter(
-            (t) => String(t.to_branch_id) === String(filterBranchId)
+        const isOutletMode = mode === "OUTLET";
+
+        const list = (transfers || []).filter((t) => {
+            const tType = (t.to_branch_type || "BRANCH").toUpperCase();
+            if (isOutletMode) {
+                return tType === "OUTLET";
+            }
+            return tType === "BRANCH";
+        });
+
+        if (filterToId === "all") return list;
+        return list.filter(
+            (t) => String(t.to_branch_id) === String(filterToId)
         );
-    }, [transfers, filterBranchId]);
+    }, [transfers, mode, filterToId]);
 
     const selectedTransfer = useMemo(
         () => transfers.find((t) => t.id === selectedTransferId) || null,
         [selectedTransferId, transfers]
     );
+
+    const selectedIsOutlet =
+        selectedTransfer &&
+        (selectedTransfer.to_branch_type || "BRANCH").toUpperCase() === "OUTLET";
 
     const renderStatusBadge = (status) => {
         const label = STATUS_LABELS[status] || status;
@@ -201,18 +254,159 @@ function TransfersPage() {
         );
     };
 
+    // Do'kon transferidagi itemni QABUL QILISH
+    const handleAcceptItem = async (transfer, item) => {
+        if (!transfer || !item) return;
+        if ((transfer.to_branch_type || "BRANCH").toUpperCase() !== "OUTLET") {
+            return;
+        }
+
+        setError("");
+        setSuccess("");
+        setActionLoadingItemId(item.id);
+
+        try {
+            await api.post(
+                `/transfers/${transfer.id}/items/${item.id}/accept`,
+                {
+                    branch_id: transfer.to_branch_id,
+                }
+            );
+
+            // yangilangan transferni olib, ro'yxatga qo'yamiz
+            const res = await api.get(`/transfers/${transfer.id}`);
+            const updated = res.data;
+            setTransfers((prev) =>
+                prev.map((t) => (t.id === transfer.id ? updated : t))
+            );
+            setSuccess("Mahsulot qabul qilindi (do‘kon omboriga kiritildi).");
+        } catch (err) {
+            console.error(err);
+            const msg =
+                err?.response?.data?.message ||
+                "Mahsulotni qabul qilishda xatolik.";
+            setError(msg);
+        } finally {
+            setActionLoadingItemId(null);
+        }
+    };
+
+    // Do'kon transferidagi itemni BEKOR QILISH
+    const handleRejectItem = async (transfer, item) => {
+        if (!transfer || !item) return;
+        if ((transfer.to_branch_type || "BRANCH").toUpperCase() !== "OUTLET") {
+            return;
+        }
+
+        setError("");
+        setSuccess("");
+        setActionLoadingItemId(item.id);
+
+        try {
+            await api.post(
+                `/transfers/${transfer.id}/items/${item.id}/reject`,
+                {
+                    branch_id: transfer.to_branch_id,
+                }
+            );
+
+            const res = await api.get(`/transfers/${transfer.id}`);
+            const updated = res.data;
+            setTransfers((prev) =>
+                prev.map((t) => (t.id === transfer.id ? updated : t))
+            );
+            setSuccess(
+                "Mahsulot bekor qilindi va markaziy omborga qaytarildi."
+            );
+        } catch (err) {
+            console.error(err);
+            const msg =
+                err?.response?.data?.message ||
+                "Mahsulotni bekor qilishda xatolik.";
+            setError(msg);
+        } finally {
+            setActionLoadingItemId(null);
+        }
+    };
+
+    const pageTitle =
+        mode === "BRANCH"
+            ? "Filiallarga transferlar"
+            : "Do‘kon / supermarketlarga transferlar";
+
+    const pageSubtitle =
+        mode === "BRANCH"
+            ? "Markaziy ombordan filial omborlariga mahsulot va bezaklarni jo‘natish (filial o‘z sahifasida qabul qiladi)."
+            : "Markaziy ombordan do‘kon va supermarketlarga jo‘natish va shu yerning o‘zida qabul qilish.";
+
+    const filterLabel =
+        mode === "BRANCH" ? "Filial:" : "Do‘kon:";
+
     return (
         <div className="page">
             <div className="page-header">
                 <div>
-                    <h1 className="page-title">Transferlar</h1>
-                    <p className="page-subtitle">
-                        Markaziy ombordan filial omborlariga mahsulot va bezaklarni
-                        jo‘natish.
-                    </p>
+                    <h1 className="page-title">{pageTitle}</h1>
+                    <p className="page-subtitle">{pageSubtitle}</p>
                 </div>
 
-                <div className="page-header-actions">
+                <div className="page-header-actions" style={{ gap: 8 }}>
+                    {/* Rejim tanlash: Filial / Do'kon */}
+                    <div
+                        style={{
+                            display: "inline-flex",
+                            borderRadius: 999,
+                            padding: 2,
+                            background: "rgba(15,23,42,0.8)",
+                            border: "1px solid rgba(148,163,184,0.6)",
+                        }}
+                    >
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setMode("BRANCH");
+                                setFilterToId("all");
+                                setSelectedTransferId(null);
+                                setError("");
+                                setSuccess("");
+                            }}
+                            style={{
+                                border: "none",
+                                padding: "4px 12px",
+                                fontSize: 12,
+                                borderRadius: 999,
+                                cursor: "pointer",
+                                backgroundColor:
+                                    mode === "BRANCH" ? "#e5e7eb" : "transparent",
+                                color: mode === "BRANCH" ? "#0b1120" : "#e5e7eb",
+                            }}
+                        >
+                            Filiallar
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setMode("OUTLET");
+                                setFilterToId("all");
+                                setSelectedTransferId(null);
+                                setError("");
+                                setSuccess("");
+                            }}
+                            style={{
+                                border: "none",
+                                padding: "4px 12px",
+                                fontSize: 12,
+                                borderRadius: 999,
+                                cursor: "pointer",
+                                backgroundColor:
+                                    mode === "OUTLET" ? "#e5e7eb" : "transparent",
+                                color: mode === "OUTLET" ? "#0b1120" : "#e5e7eb",
+                            }}
+                        >
+                            Do‘konlar
+                        </button>
+                    </div>
+
                     <input
                         className="input"
                         type="date"
@@ -235,20 +429,28 @@ function TransfersPage() {
 
             {/* Transfer yaratish formasi */}
             <div className="card">
-                <div className="card-title">Yangi transfer yaratish</div>
+                <div className="card-title">
+                    {mode === "BRANCH"
+                        ? "Filialga yangi transfer yaratish"
+                        : "Do‘konga yangi transfer yaratish"}
+                </div>
 
                 <form onSubmit={handleSubmit}>
                     <div className="form-row">
                         <div>
-                            <label>Filial</label>
+                            <label>{mode === "BRANCH" ? "Filial" : "Do‘kon / supermarket"}</label>
                             <select
                                 className="input"
                                 value={toBranchId}
                                 onChange={(e) => setToBranchId(e.target.value)}
                                 disabled={loadingBranches}
                             >
-                                <option value="">Filial tanlang</option>
-                                {branches.map((b) => (
+                                <option value="">
+                                    {mode === "BRANCH"
+                                        ? "Filial tanlang"
+                                        : "Do‘kon / supermarket tanlang"}
+                                </option>
+                                {destinationOptions.map((b) => (
                                     <option key={b.id} value={b.id}>
                                         {b.name} {b.code ? `(${b.code})` : ""}
                                     </option>
@@ -263,7 +465,7 @@ function TransfersPage() {
                                 <tr>
                                     <th style={{ width: "45%" }}>Mahsulot / bezak</th>
                                     <th style={{ width: "25%" }}>Miqdor</th>
-                                    <th style={{ width: "10%" }}></th>
+                                    <th style={{ width: "10%" }} />
                                 </tr>
                             </thead>
                             <tbody>
@@ -358,7 +560,11 @@ function TransfersPage() {
                             rows={2}
                             value={note}
                             onChange={(e) => setNote(e.target.value)}
-                            placeholder="Masalan: Xonqa filialiga ertalabki jo‘natma..."
+                            placeholder={
+                                mode === "BRANCH"
+                                    ? "Masalan: Xonqa filialiga ertalabki jo‘natma..."
+                                    : "Masalan: Korzinka Chilonzor savdo nuqtasiga jo‘natma..."
+                            }
                         />
                     </div>
 
@@ -387,19 +593,23 @@ function TransfersPage() {
                         gap: 8,
                     }}
                 >
-                    <span>Barcha transferlar</span>
+                    <span>
+                        {mode === "BRANCH"
+                            ? "Filiallarga transferlar"
+                            : "Do‘konlarga transferlar"}
+                    </span>
 
-                    {/* Filial bo‘yicha filter */}
+                    {/* Filial / do'kon bo‘yicha filter */}
                     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                        <span style={{ fontSize: 13, color: "#9ca3af" }}>Filial:</span>
+                        <span style={{ fontSize: 13, color: "#9ca3af" }}>{filterLabel}</span>
                         <select
                             className="input"
                             style={{ minWidth: 140 }}
-                            value={filterBranchId}
-                            onChange={(e) => setFilterBranchId(e.target.value)}
+                            value={filterToId}
+                            onChange={(e) => setFilterToId(e.target.value)}
                         >
                             <option value="all">Barchasi</option>
-                            {branches.map((b) => (
+                            {destinationOptions.map((b) => (
                                 <option key={b.id} value={b.id}>
                                     {b.name} {b.code ? `(${b.code})` : ""}
                                 </option>
@@ -419,7 +629,7 @@ function TransfersPage() {
                                 <tr>
                                     <th>#</th>
                                     <th>Sana</th>
-                                    <th>Filial</th>
+                                    <th>{mode === "BRANCH" ? "Filial" : "Do‘kon"}</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
@@ -480,6 +690,9 @@ function TransfersPage() {
                                         <th>Mahsulot / bezak</th>
                                         <th>Miqdor</th>
                                         <th>Status</th>
+                                        {selectedIsOutlet && (
+                                            <th style={{ width: 220 }}>Amal</th>
+                                        )}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -493,21 +706,83 @@ function TransfersPage() {
                                             </td>
                                             <td>
                                                 {it.status === "PENDING" && (
-                                                    <span style={{ fontSize: 13, color: "#facc15" }}>
+                                                    <span
+                                                        style={{ fontSize: 13, color: "#facc15" }}
+                                                    >
                                                         Kutilmoqda
                                                     </span>
                                                 )}
                                                 {it.status === "ACCEPTED" && (
-                                                    <span style={{ fontSize: 13, color: "#22c55e" }}>
+                                                    <span
+                                                        style={{ fontSize: 13, color: "#22c55e" }}
+                                                    >
                                                         Qabul qilingan
                                                     </span>
                                                 )}
                                                 {it.status === "REJECTED" && (
-                                                    <span style={{ fontSize: 13, color: "#f97316" }}>
+                                                    <span
+                                                        style={{ fontSize: 13, color: "#f97316" }}
+                                                    >
                                                         Bekor qilingan (markaziyga qaytdi)
                                                     </span>
                                                 )}
                                             </td>
+
+                                            {/* faqat DO'KON transferlarida shu yerda qabul/ bekor qilish */}
+                                            {selectedIsOutlet && (
+                                                <td>
+                                                    {it.status === "PENDING" ? (
+                                                        <div
+                                                            style={{
+                                                                display: "flex",
+                                                                gap: 6,
+                                                                justifyContent: "flex-start",
+                                                            }}
+                                                        >
+                                                            <button
+                                                                type="button"
+                                                                className="button-primary"
+                                                                style={{
+                                                                    padding: "3px 8px",
+                                                                    fontSize: 11,
+                                                                    boxShadow: "none",
+                                                                    backgroundColor: "#22c55e",
+                                                                }}
+                                                                disabled={actionLoadingItemId === it.id}
+                                                                onClick={() =>
+                                                                    handleAcceptItem(selectedTransfer, it)
+                                                                }
+                                                            >
+                                                                {actionLoadingItemId === it.id
+                                                                    ? "..."
+                                                                    : "Qabul qilish"}
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                className="button-primary"
+                                                                style={{
+                                                                    padding: "3px 8px",
+                                                                    fontSize: 11,
+                                                                    boxShadow: "none",
+                                                                    backgroundColor: "#f97316",
+                                                                }}
+                                                                disabled={actionLoadingItemId === it.id}
+                                                                onClick={() =>
+                                                                    handleRejectItem(selectedTransfer, it)
+                                                                }
+                                                            >
+                                                                {actionLoadingItemId === it.id
+                                                                    ? "..."
+                                                                    : "Bekor qilish"}
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <span style={{ fontSize: 12, opacity: 0.7 }}>
+                                                            —
+                                                        </span>
+                                                    )}
+                                                </td>
+                                            )}
                                         </tr>
                                     ))}
                                 </tbody>

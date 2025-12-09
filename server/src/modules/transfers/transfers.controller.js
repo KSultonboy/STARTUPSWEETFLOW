@@ -4,11 +4,15 @@ const service = require("./transfers.service");
 
 async function createTransfer(req, res) {
     try {
-        const transfer = await service.createTransfer(req.body);
+        const user = req.user || null; // auth middleware dan keladi (agar ulangan bo‘lsa)
+
+        const transfer = await service.createTransfer(req.body || {}, user);
         res.status(201).json(transfer);
     } catch (err) {
         console.error("createTransfer error:", err);
-        res.status(400).json({ message: err.message || "Transfer yaratishda xatolik" });
+        res
+            .status(400)
+            .json({ message: err.message || "Transfer yaratishda xatolik" });
     }
 }
 
@@ -48,7 +52,9 @@ async function getIncomingForBranch(req, res) {
         res.json(list);
     } catch (err) {
         console.error("getIncomingForBranch error:", err);
-        res.status(400).json({ message: err.message || "Kiruvchi transferlarni olishda xatolik" });
+        res.status(400).json({
+            message: err.message || "Kiruvchi transferlarni olishda xatolik",
+        });
     }
 }
 
@@ -66,7 +72,9 @@ async function acceptItem(req, res) {
         res.json(updated);
     } catch (err) {
         console.error("acceptItem error:", err);
-        res.status(400).json({ message: err.message || "Itemni qabul qilishda xatolik" });
+        res
+            .status(400)
+            .json({ message: err.message || "Itemni qabul qilishda xatolik" });
     }
 }
 
@@ -84,7 +92,9 @@ async function rejectItem(req, res) {
         res.json(updated);
     } catch (err) {
         console.error("rejectItem error:", err);
-        res.status(400).json({ message: err.message || "Itemni bekor qilishda xatolik" });
+        res
+            .status(400)
+            .json({ message: err.message || "Itemni bekor qilishda xatolik" });
     }
 }
 

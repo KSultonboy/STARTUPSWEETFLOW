@@ -40,8 +40,21 @@ function validateCreateInput(data = {}) {
     };
 }
 
-async function createTransfer(data) {
-    const valid = validateCreateInput(data);
+/**
+ * Yangi transfer yaratish
+ *  - user bu yerga controller'dan keladi (req.user)
+ *  - created_by ni user.id bilan to‘ldirib yuboramiz (agar bo‘lsa)
+ *  - BU YERDA endi "Faqat admin" tekshiruvi YO‘Q – agar kerak bo‘lsa routes’da requireRole('admin') bilan qilamiz
+ */
+async function createTransfer(data, user) {
+    // created_by ni user.id dan ustun qo'yamiz,
+    // frontdan kelgan created_by bo'lsa ham overwrite qilamiz:
+    const payload = {
+        ...data,
+        created_by: user?.id || data?.created_by || null,
+    };
+
+    const valid = validateCreateInput(payload);
     return repo.createTransfer(valid);
 }
 
