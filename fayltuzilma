@@ -1,1 +1,223 @@
-Notes:
+﻿Project Structure:
++-- app
+|   +-- assets
+|   |   +-- adaptive-icon.png
+|   |   +-- favicon.png
+|   |   +-- icon.png
+|   |   \-- splash-icon.png
+|   +-- src
+|   |   +-- components
+|   |   |   \-- reports
+|   |   |       +-- ReportsExpensesByTypeSection.jsx
+|   |   |       +-- ReportsMonthlyBarChartNative.jsx
+|   |   |       +-- ReportsProductionSectionNative.jsx
+|   |   |       +-- ReportsSalesByBranchSection.jsx
+|   |   |       +-- ReportsSummaryCardsNative.jsx
+|   |   |       \-- ReportsTopProductsSection.jsx
+|   |   +-- context
+|   |   |   \-- AuthContext.jsx
+|   |   +-- navigation
+|   |   |   \-- RootNavigator.jsx
+|   |   +-- screens
+|   |   |   +-- BranchesScreen.jsx
+|   |   |   +-- ExpensesScreen.jsx
+|   |   |   +-- HistoryScreen.jsx
+|   |   |   +-- HomeScreen.jsx
+|   |   |   +-- LoginScreen.jsx
+|   |   |   +-- ProductionScreen.jsx
+|   |   |   +-- ProductsScreen.jsx
+|   |   |   +-- ReceivingScreen.jsx
+|   |   |   +-- ReportsScreen.jsx
+|   |   |   +-- ReturnsScreen.jsx
+|   |   |   +-- SalesScreen.jsx
+|   |   |   +-- TransfersScreen.jsx
+|   |   |   +-- UsersScreen.jsx
+|   |   |   \-- WarehouseScreen.jsx
+|   |   \-- services
+|   |       \-- api.js
+|   +-- .gitignore
+|   +-- App.js
+|   +-- app.json
+|   +-- babel.config.js
+|   +-- index.js
+|   +-- package-lock.json
+|   \-- package.json
++-- client
+|   +-- public
+|   |   \-- vite.svg
+|   +-- src
+|   |   +-- assets
+|   |   |   +-- scss
+|   |   |   |   +-- main.scss
+|   |   |   |   +-- _auth.scss
+|   |   |   |   +-- _base.scss
+|   |   |   |   +-- _components.scss
+|   |   |   |   +-- _forms.scss
+|   |   |   |   +-- _layout.scss
+|   |   |   |   +-- _tables.scss
+|   |   |   |   \-- _variables.scss
+|   |   |   \-- react.svg
+|   |   +-- components
+|   |   |   +-- branches
+|   |   |   |   +-- BranchesTable.jsx
+|   |   |   |   \-- BranchForm.jsx
+|   |   |   +-- expenses
+|   |   |   |   +-- ExpensesForm.jsx
+|   |   |   |   +-- ExpensesList.jsx
+|   |   |   |   \-- ExpensesTabs.jsx
+|   |   |   +-- history
+|   |   |   |   +-- HistoryFilters.jsx
+|   |   |   |   \-- HistoryTable.jsx
+|   |   |   +-- products
+|   |   |   |   +-- ProductForm.jsx
+|   |   |   |   +-- ProductsFilterBar.jsx
+|   |   |   |   \-- ProductsTable.jsx
+|   |   |   +-- reports
+|   |   |   |   +-- ExpensesByTypeTable.jsx
+|   |   |   |   +-- MonthlySalesChart.jsx
+|   |   |   |   +-- PdfExportButton.jsx
+|   |   |   |   +-- ReportsDetailsModal.jsx
+|   |   |   |   +-- ReportsEntityModal.jsx
+|   |   |   |   +-- ReportsExpensesByTypeTable.jsx
+|   |   |   |   +-- ReportsFilterBar.jsx
+|   |   |   |   +-- ReportsMonthlyBarChart.jsx
+|   |   |   |   +-- ReportsProductionSection.jsx
+|   |   |   |   +-- ReportsSalesByBranchTable.jsx
+|   |   |   |   +-- ReportsSummaryCards.jsx
+|   |   |   |   +-- ReportsTopProductsTable.jsx
+|   |   |   |   +-- SalesByBranchTable.jsx
+|   |   |   |   \-- TopProductsTable.jsx
+|   |   |   +-- returns
+|   |   |   |   +-- BranchReturnForm.jsx
+|   |   |   |   +-- OutletReturnForm.jsx
+|   |   |   |   +-- ReturnDetailDrawer.jsx
+|   |   |   |   \-- ReturnsTable.jsx
+|   |   |   +-- transfers
+|   |   |   |   +-- TransferForm.jsx
+|   |   |   |   \-- TransfersTable.jsx
+|   |   |   +-- users
+|   |   |   |   +-- UsersForm.jsx
+|   |   |   |   \-- UsersTable.jsx
+|   |   |   +-- warehouse
+|   |   |   |   +-- WarehouseFilters.jsx
+|   |   |   |   \-- WarehouseTable.jsx
+|   |   |   \-- PrivateRoute.jsx
+|   |   +-- context
+|   |   |   \-- AuthContext.jsx
+|   |   +-- pages
+|   |   |   +-- BranchesPage.jsx
+|   |   |   +-- ExpensesPage.jsx
+|   |   |   +-- HistoryPage.jsx
+|   |   |   +-- LoginPage.jsx
+|   |   |   +-- ProductionPage.jsx
+|   |   |   +-- ProductsPage.jsx
+|   |   |   +-- ReceivingPage.jsx
+|   |   |   +-- ReportsPage.jsx
+|   |   |   +-- ReturnsPage.jsx
+|   |   |   +-- SalesPage.jsx
+|   |   |   +-- TransfersPage.jsx
+|   |   |   +-- UsersPage.jsx
+|   |   |   \-- WarehousePage.jsx
+|   |   +-- services
+|   |   |   \-- api.js
+|   |   +-- App.jsx
+|   |   \-- main.jsx
+|   +-- .env
+|   +-- .gitignore
+|   +-- eslint.config.js
+|   +-- index.html
+|   +-- package-lock.json
+|   +-- package.json
+|   +-- README.md
+|   \-- vite.config.js
++-- server
+|   +-- data
+|   |   +-- ruxshona.db
+|   |   \-- ruxshona.sqbpro
+|   +-- middleware,
+|   +-- realtime}
+|   +-- src
+|   |   +-- config
+|   |   |   \-- env.js
+|   |   +-- db
+|   |   |   +-- migrations
+|   |   |   |   \-- add_outlets.sql
+|   |   |   +-- seeders
+|   |   |   \-- connection.js
+|   |   +-- middleware
+|   |   |   \-- auth.js
+|   |   +-- modules
+|   |   |   +-- auth
+|   |   |   |   +-- auth.controller.js
+|   |   |   |   +-- auth.repository.js
+|   |   |   |   +-- auth.routes.js
+|   |   |   |   \-- auth.service.js
+|   |   |   +-- branches
+|   |   |   |   +-- branches.controller.js
+|   |   |   |   +-- branches.repository.js
+|   |   |   |   +-- branches.routes.js
+|   |   |   |   \-- branches.service.js
+|   |   |   +-- expenses
+|   |   |   |   +-- expenses.controller.js
+|   |   |   |   +-- expenses.repository.js
+|   |   |   |   +-- expenses.routes.js
+|   |   |   |   \-- expenses.service.js
+|   |   |   +-- history
+|   |   |   |   +-- history.controller.js
+|   |   |   |   +-- history.repository.js
+|   |   |   |   +-- history.routes.js
+|   |   |   |   \-- history.service.js
+|   |   |   +-- production
+|   |   |   |   +-- production.controller.js
+|   |   |   |   +-- production.repository.js
+|   |   |   |   +-- production.routes.js
+|   |   |   |   \-- production.service.js
+|   |   |   +-- products
+|   |   |   |   +-- products.controller.js
+|   |   |   |   +-- products.repository.js
+|   |   |   |   +-- products.routes.js
+|   |   |   |   +-- products.service.js
+|   |   |   |   \-- products.validation.js
+|   |   |   +-- reports
+|   |   |   |   +-- reports.controller.js
+|   |   |   |   +-- reports.repository.js
+|   |   |   |   +-- reports.routes.js
+|   |   |   |   \-- reports.service.js
+|   |   |   +-- returns
+|   |   |   |   +-- returns.controller.js
+|   |   |   |   +-- returns.repository.js
+|   |   |   |   +-- returns.routes.js
+|   |   |   |   \-- returns.service.js
+|   |   |   +-- sales
+|   |   |   |   +-- sales.controller.js
+|   |   |   |   +-- sales.repository.js
+|   |   |   |   +-- sales.routes.js
+|   |   |   |   \-- sales.service.js
+|   |   |   +-- transfers
+|   |   |   |   +-- transfers.controller.js
+|   |   |   |   +-- transfers.repository.js
+|   |   |   |   +-- transfers.routes.js
+|   |   |   |   \-- transfers.service.js
+|   |   |   +-- users
+|   |   |   |   +-- users.controller.js
+|   |   |   |   +-- users.repository.js
+|   |   |   |   +-- users.routes.js
+|   |   |   |   \-- users.service.js
+|   |   |   \-- warehouse
+|   |   |       +-- warehouse.controller.js
+|   |   |       +-- warehouse.repository.js
+|   |   |       +-- warehouse.routes.js
+|   |   |       \-- warehouse.service.js
+|   |   +-- realtime
+|   |   |   \-- index.js
+|   |   +-- utils
+|   |   +-- {config,db
+|   |   |   +-- migrations,modules,
+|   |   |   \-- seeders,modules,
+|   |   +-- app.js
+|   |   \-- server.js
+|   +-- .env
+|   +-- package-lock.json
+|   \-- package.json
++-- fayltuzilma
+\-- generate_tree.ps1

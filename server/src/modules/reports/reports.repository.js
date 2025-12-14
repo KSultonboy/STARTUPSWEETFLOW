@@ -1,7 +1,37 @@
 // server/src/modules/reports/reports.repository.js
-const { get, all } = require('../../db/connection');
+const { get, all } = require("../../db/connection");
 
-async function getOverview(date) {
+function buildPeriodCondition(columnExpr, mode, date) {
+  const m = String(mode || "day").toLowerCase();
+
+  if (m === "week") {
+    return {
+      clause: `${columnExpr} >= date(?, '-6 day') AND ${columnExpr} <= date(?)`,
+      params: [date, date],
+    };
+  }
+
+  if (m === "month") {
+    return {
+      clause: `strftime('%Y-%m', ${columnExpr}) = strftime('%Y-%m', ?)`,
+      params: [date],
+    };
+  }
+
+  if (m === "year") {
+    return {
+      clause: `strftime('%Y', ${columnExpr}) = strftime('%Y', ?)`,
+      params: [date],
+    };
+  }
+
+  return {
+    clause: `${columnExpr} = ?`,
+    params: [date],
+  };
+}
+
+async function getOverview(date, mode = "day") {
   // 1) Filiallar (oddiy branchlar)
   const branchesRow = await get(
     `
@@ -25,51 +55,51 @@ async function getOverview(date) {
   );
 
   // 3) Foydalanuvchilar
-  const usersRow = await get(
-    `SELECT COUNT(*) AS total FROM users WHERE is_active = 1`,
-    []
-  );
+  const usersRow = await get(`SELECT COUNT(*) AS total FROM users WHERE is_active = 1`, []);
 
   // 4) Mahsulotlar
-  const productsRow = await get(
-    `SELECT COUNT(*) AS total FROM products`,
-    []
-  );
+  const productsRow = await get(`SELECT COUNT(*) AS total FROM products`, []);
 
-  // 5) Kunlik savdo (jami va cheklar soni)
+  // === Period bo‘yicha savdo ===
+  const salesDateCond = buildPeriodCondition("sale_date", mode, date);
+
+  // 5) Savdo (jami va cheklar soni) – period bo‘yicha
   const salesRow = await get(
     `
       SELECT 
         IFNULL(SUM(total_amount), 0) AS total_amount,
         COUNT(*) AS sale_count
       FROM sales
-      WHERE sale_date = ?
+      WHERE ${salesDateCond.clause}
     `,
-    [date]
+    salesDateCond.params
   );
+  const todaySalesAmount = salesRow?.total_amount || 0;
+  const todaySalesCount = salesRow?.sale_count || 0;
 
-  // 6) Eng ko‘p sotilgan mahsulotlar (shu kun)
+  // 6) Eng ko‘p sotilgan mahsulotlar – period bo‘yicha
   const topProducts = await all(
     `
       SELECT
         p.id   AS product_id,
         p.name AS product_name,
         b.name AS branch_name,
-        SUM(si.quantity)        AS sold_quantity,
+        SUM(si.quantity)               AS sold_quantity,
         IFNULL(SUM(si.total_price), 0) AS total_amount
       FROM sale_items si
       JOIN sales    s ON s.id = si.sale_id
       JOIN products p ON p.id = si.product_id
       LEFT JOIN branches b ON b.id = s.branch_id
-      WHERE s.sale_date = ?
+      WHERE ${salesDateCond.clause}
       GROUP BY p.id, p.name, b.name
       ORDER BY sold_quantity DESC
       LIMIT 10
     `,
-    [date]
+    salesDateCond.params
   );
 
-  // 7) Oylik savdo (shu sananing oyi bo‘yicha)
+  // 7) Oylik grafika: doim tanlangan sananing OYI bo‘yicha
+  const monthlyCond = buildPeriodCondition("sale_date", "month", date);
   const monthlySales = await all(
     `
       SELECT
@@ -77,26 +107,30 @@ async function getOverview(date) {
         IFNULL(SUM(total_amount), 0) AS total_amount,
         COUNT(*) AS sale_count
       FROM sales
-      WHERE strftime('%Y-%m', sale_date) = strftime('%Y-%m', ?)
+      WHERE ${monthlyCond.clause}
       GROUP BY sale_date
       ORDER BY sale_date ASC
     `,
-    [date]
+    monthlyCond.params
   );
 
-  // 8) Kunlik xarajatlar (jami)
+  // === Period bo‘yicha xarajatlar ===
+  const expenseDateCond = buildPeriodCondition("e.expense_date", mode, date);
+
+  // 8) Xarajatlar (jami)
   const expenseTotalRow = await get(
     `
       SELECT
         IFNULL(SUM(ei.total_price), 0) AS total_amount
       FROM expenses e
       JOIN expense_items ei ON ei.expense_id = e.id
-      WHERE e.expense_date = ?
+      WHERE ${expenseDateCond.clause}
     `,
-    [date]
+    expenseDateCond.params
   );
+  const totalExpenses = expenseTotalRow?.total_amount || 0;
 
-  // 9) Xarajat turlari bo‘yicha
+  // 9) Xarajat turlari bo‘yicha (period)
   const expensesByType = await all(
     `
       SELECT
@@ -104,13 +138,16 @@ async function getOverview(date) {
         IFNULL(SUM(ei.total_price), 0) AS total_amount
       FROM expenses e
       JOIN expense_items ei ON ei.expense_id = e.id
-      WHERE e.expense_date = ?
+      WHERE ${expenseDateCond.clause}
       GROUP BY e.type
     `,
-    [date]
+    expenseDateCond.params
   );
 
-  // 10) Ishlab chiqarish bo‘yicha ma'lumot
+  // === Period bo‘yicha ishlab chiqarish ===
+  const prodDateCond = buildPeriodCondition("pb.batch_date", mode, date);
+
+  // 10) Ishlab chiqarish umumiy
   const productionRow = await get(
     `
       SELECT
@@ -118,50 +155,302 @@ async function getOverview(date) {
         IFNULL(SUM(pi.quantity), 0) AS total_quantity
       FROM production_batches pb
       LEFT JOIN production_items pi ON pi.batch_id = pb.id
-      WHERE pb.batch_date = ?
+      WHERE ${prodDateCond.clause}
     `,
-    [date]
+    prodDateCond.params
   );
 
-  // 11) Filiallar bo‘yicha savdo (shu kun)
+  const productionBatchCount = productionRow?.batch_count || 0;
+  const productionQuantity = productionRow?.total_quantity || 0;
+
+  // 10.1) Ishlab chiqarish – mahsulotlar bo‘yicha
+  const productionByProduct = await all(
+    `
+      SELECT
+        p.id   AS product_id,
+        p.name AS product_name,
+        p.unit AS unit,
+        IFNULL(SUM(pi.quantity), 0) AS total_quantity
+      FROM production_batches pb
+      JOIN production_items pi ON pi.batch_id = pb.id
+      JOIN products p          ON p.id        = pi.product_id
+      WHERE ${prodDateCond.clause}
+      GROUP BY p.id, p.name, p.unit
+      ORDER BY total_quantity DESC
+    `,
+    prodDateCond.params
+  );
+
+  // === Period bo‘yicha filial/do‘kon savdosi (salesByBranch) ===
   const salesByBranch = await all(
     `
       SELECT
         b.id   AS branch_id,
         b.name AS branch_name,
+        UPPER(IFNULL(b.branch_type, 'BRANCH')) AS branch_type,
         IFNULL(SUM(s.total_amount), 0) AS total_amount,
         COUNT(s.id) AS sale_count
       FROM sales s
       LEFT JOIN branches b ON b.id = s.branch_id
-      WHERE s.sale_date = ?
-      GROUP BY b.id, b.name
+      WHERE ${salesDateCond.clause}
+      GROUP BY b.id, b.name, branch_type
       ORDER BY total_amount DESC
     `,
-    [date]
+    salesDateCond.params
   );
 
-  const todaySalesAmount = salesRow?.total_amount || 0;
-  const todaySalesCount = salesRow?.sale_count || 0;
-  const totalExpenses = expenseTotalRow?.total_amount || 0;
-  const profit = todaySalesAmount - totalExpenses;
+  // === Period bo‘yicha OUTLETlarga transferlar ===
+  const transferDateCond = buildPeriodCondition("t.transfer_date", mode, date);
+
+  const outletTransfersRow = await get(
+    `
+      SELECT
+        IFNULL(SUM(
+          ti.quantity *
+          CASE
+            WHEN p.wholesale_price IS NOT NULL AND p.wholesale_price > 0
+              THEN p.wholesale_price
+            ELSE p.price
+          END
+        ), 0) AS total_amount
+      FROM transfer_items ti
+      JOIN transfers t ON t.id = ti.transfer_id
+      JOIN branches b ON b.id = t.to_branch_id
+      JOIN products p ON p.id = ti.product_id
+      WHERE ${transferDateCond.clause}
+        AND UPPER(IFNULL(b.branch_type, 'BRANCH')) = 'OUTLET'
+        AND ti.status = 'ACCEPTED'
+    `,
+    transferDateCond.params
+  );
+
+  const outletTransfersAmountPeriod = outletTransfersRow?.total_amount || 0;
+
+  const outletTransfersByBranch = await all(
+    `
+      SELECT
+        b.id   AS branch_id,
+        b.name AS branch_name,
+        UPPER(IFNULL(b.branch_type, 'BRANCH')) AS branch_type,
+        IFNULL(SUM(
+          ti.quantity *
+          CASE
+            WHEN p.wholesale_price IS NOT NULL AND p.wholesale_price > 0
+              THEN p.wholesale_price
+            ELSE p.price
+          END
+        ), 0) AS total_amount
+      FROM transfer_items ti
+      JOIN transfers t ON t.id = ti.transfer_id
+      JOIN branches b ON b.id = t.to_branch_id
+      JOIN products p ON p.id = ti.product_id
+      WHERE ${transferDateCond.clause}
+        AND UPPER(IFNULL(b.branch_type, 'BRANCH')) = 'OUTLET'
+        AND ti.status = 'ACCEPTED'
+      GROUP BY b.id, b.name, branch_type
+      ORDER BY total_amount DESC
+    `,
+    transferDateCond.params
+  );
+
+  // === Period bo‘yicha vazvratlar ===
+  const returnsDateCond = buildPeriodCondition("date(wm.created_at)", mode, date);
+
+  const returnsPeriodRow = await get(
+    `
+      SELECT
+        IFNULL(SUM(
+          wm.quantity *
+          CASE
+            WHEN p.wholesale_price IS NOT NULL AND p.wholesale_price > 0
+              THEN p.wholesale_price
+            ELSE p.price
+          END
+        ), 0) AS total_amount
+      FROM warehouse_movements wm
+      JOIN products p ON p.id = wm.product_id
+      WHERE wm.source_type = 'return'
+        AND ${returnsDateCond.clause}
+    `,
+    returnsDateCond.params
+  );
+
+  const returnsAmountPeriod = returnsPeriodRow?.total_amount || 0;
+
+  const returnsByProduct = await all(
+    `
+      SELECT
+        p.id   AS product_id,
+        p.name AS product_name,
+        p.unit AS unit,
+        IFNULL(SUM(wm.quantity), 0) AS total_quantity,
+        IFNULL(SUM(
+          wm.quantity *
+          CASE
+            WHEN p.wholesale_price IS NOT NULL AND p.wholesale_price > 0
+              THEN p.wholesale_price
+            ELSE p.price
+          END
+        ), 0) AS total_amount
+      FROM warehouse_movements wm
+      JOIN products p ON p.id = wm.product_id
+      WHERE wm.source_type = 'return'
+        AND ${returnsDateCond.clause}
+      GROUP BY p.id, p.name, p.unit
+      ORDER BY total_amount DESC
+    `,
+    returnsDateCond.params
+  );
+
+  const returnsByBranchToday = await all(
+    `
+      SELECT
+        b.id   AS branch_id,
+        b.name AS branch_name,
+        UPPER(IFNULL(b.branch_type, 'BRANCH')) AS branch_type,
+        IFNULL(SUM(
+          wm.quantity *
+          CASE
+            WHEN p.wholesale_price IS NOT NULL AND p.wholesale_price > 0
+              THEN p.wholesale_price
+            ELSE p.price
+          END
+        ), 0) AS total_amount
+      FROM warehouse_movements wm
+      JOIN products p ON p.id = wm.product_id
+      LEFT JOIN branches b ON b.id = wm.branch_id
+      WHERE wm.source_type = 'return'
+        AND ${returnsDateCond.clause}
+      GROUP BY b.id, b.name, branch_type
+    `,
+    returnsDateCond.params
+  );
+
+  // === ✅ KASSA (period) ===
+  const cashDateCond = buildPeriodCondition("c.cash_date", mode, date);
+
+  const cashPeriodRow = await get(
+    `
+      SELECT IFNULL(SUM(c.amount), 0) AS total_amount
+      FROM cash_entries c
+      WHERE ${cashDateCond.clause}
+    `,
+    cashDateCond.params
+  );
+  const cashReceivedPeriod = cashPeriodRow?.total_amount || 0;
+
+  const cashByBranchPeriod = await all(
+    `
+      SELECT
+        b.id AS branch_id,
+        b.name AS branch_name,
+        UPPER(IFNULL(b.branch_type,'BRANCH')) AS branch_type,
+        IFNULL(SUM(c.amount), 0) AS total_amount
+      FROM cash_entries c
+      LEFT JOIN branches b ON b.id = c.branch_id
+      WHERE ${cashDateCond.clause}
+      GROUP BY b.id, b.name, branch_type
+      ORDER BY total_amount DESC
+    `,
+    cashDateCond.params
+  );
+
+  // === Qarzlar – ALL TIME (endilikda: (Sales + OutletTransfers) - Returns - Cash) ===
+  const salesAllRow = await get(
+    `SELECT IFNULL(SUM(total_amount), 0) AS total_amount FROM sales`,
+    []
+  );
+  const salesAllAmount = salesAllRow?.total_amount || 0;
+
+  const outletTransfersAllRow = await get(
+    `
+      SELECT
+        IFNULL(SUM(
+          ti.quantity *
+          CASE
+            WHEN p.wholesale_price IS NOT NULL AND p.wholesale_price > 0
+              THEN p.wholesale_price
+            ELSE p.price
+          END
+        ), 0) AS total_amount
+      FROM transfer_items ti
+      JOIN transfers t ON t.id = ti.transfer_id
+      JOIN branches b ON b.id = t.to_branch_id
+      JOIN products p ON p.id = ti.product_id
+      WHERE UPPER(IFNULL(b.branch_type, 'BRANCH')) = 'OUTLET'
+        AND ti.status = 'ACCEPTED'
+    `,
+    []
+  );
+  const outletTransfersAllAmount = outletTransfersAllRow?.total_amount || 0;
+
+  const returnsAllRow = await get(
+    `
+      SELECT
+        IFNULL(SUM(
+          wm.quantity *
+          CASE
+            WHEN p.wholesale_price IS NOT NULL AND p.wholesale_price > 0
+              THEN p.wholesale_price
+            ELSE p.price
+          END
+        ), 0) AS total_amount
+      FROM warehouse_movements wm
+      JOIN products p ON p.id = wm.product_id
+      WHERE wm.source_type = 'return'
+    `,
+    []
+  );
+  const returnsAllAmount = returnsAllRow?.total_amount || 0;
+
+  const cashAllRow = await get(
+    `SELECT IFNULL(SUM(amount), 0) AS total_amount FROM cash_entries`,
+    []
+  );
+  const cashReceivedAllTime = cashAllRow?.total_amount || 0;
+
+  const debtsAmount =
+    (salesAllAmount + outletTransfersAllAmount) - returnsAllAmount - cashReceivedAllTime;
+
+  // === Yakuniy ko‘rsatkichlar ===
+  const totalRevenue = todaySalesAmount + outletTransfersAmountPeriod;
+
+  // ✅ endi real kassa
+  const cashReceivedToday = cashReceivedPeriod;
+
+  const profit = totalRevenue - totalExpenses - returnsAmountPeriod;
 
   return {
     stats: {
       totalBranches: branchesRow?.total || 0,
-      totalOutlets: outletsRow?.total || 0,   // 👈 endi shu ishlaydi
+      totalOutlets: outletsRow?.total || 0,
       totalUsers: usersRow?.total || 0,
       totalProducts: productsRow?.total || 0,
+
       todaySalesAmount,
       todaySalesCount,
+
       totalExpenses,
+      totalRevenue,
+      returnsAmountToday: returnsAmountPeriod,
+      debtsAmount,
+      cashReceivedToday,
+
       profit,
-      productionBatchCount: productionRow?.batch_count || 0,
-      productionQuantity: productionRow?.total_quantity || 0,
+      productionBatchCount,
+      productionQuantity,
     },
     topProducts,
     monthlySales,
     salesByBranch,
     expensesByType,
+    productionByProduct,
+    returnsByProduct,
+    outletTransfersByBranch,
+    returnsByBranchToday,
+
+    // ✅ qo‘shildi
+    cashByBranchPeriod,
   };
 }
 

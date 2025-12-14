@@ -1,7 +1,7 @@
+// server/src/middleware/auth.js
 const jwt = require('jsonwebtoken');
 const { jwtSecret } = require('../config/env');
 
-// Oddiy auth middleware
 function requireAuth(req, res, next) {
     const authHeader = req.headers.authorization || '';
 
@@ -13,7 +13,6 @@ function requireAuth(req, res, next) {
 
     try {
         const payload = jwt.verify(token, jwtSecret);
-        // payload: { id, role, branchId, iat, exp }
         req.user = {
             id: payload.id,
             role: payload.role,
@@ -22,11 +21,16 @@ function requireAuth(req, res, next) {
         next();
     } catch (err) {
         console.error('JWT verify error:', err.message);
+
+        // ❗ MUHIM: refresh interceptorga to‘g‘ri chiqishi uchun aynan shu text bo‘lishi kerak
+        if (err.message.includes("jwt expired")) {
+            return res.status(401).json({ message: "JWT expired" });
+        }
+
         return res.status(401).json({ message: 'Token noto‘g‘ri yoki eskirgan' });
     }
 }
 
-// Ro‘l bo‘yicha cheklash
 function requireRole(...allowedRoles) {
     return (req, res, next) => {
         if (!req.user || !allowedRoles.includes(req.user.role)) {

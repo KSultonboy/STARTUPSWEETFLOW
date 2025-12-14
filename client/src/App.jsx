@@ -16,6 +16,7 @@ import ExpensesPage from "./pages/ExpensesPage";
 import TransfersPage from "./pages/TransfersPage";
 import ReceivingPage from "./pages/ReceivingPage";
 import ReturnsPage from "./pages/ReturnsPage";
+import CashPage from "./pages/CashPage";
 
 function App() {
   const { user, logout } = useAuth();
@@ -97,6 +98,11 @@ function App() {
                     )}
                   </Link>
 
+                  <Link className={isActive("/cash")} to="/cash">
+                    <span className="app-nav-icon">💰</span>
+                    {!sidebarCollapsed && <span className="app-nav-label">Kassa</span>}
+                  </Link>
+
                   <Link className={isActive("/branches")} to="/branches">
                     <span className="app-nav-icon">🏬</span>
                     {!sidebarCollapsed && (
@@ -159,6 +165,11 @@ function App() {
               {/* BRANCH MENYU – filial kassirlar */}
               {isBranch && (
                 <>
+                  <Link className={isActive("/cash")} to="/cash">
+                    <span className="app-nav-icon">💰</span>
+                    {!sidebarCollapsed && <span className="app-nav-label">Kassa</span>}
+                  </Link>
+
                   <Link className={isActive("/warehouse")} to="/warehouse">
                     <span className="app-nav-icon">📦</span>
                     {!sidebarCollapsed && (
@@ -388,6 +399,16 @@ function App() {
                   </PrivateRoute>
                 }
               />
+
+              <Route
+                path="/cash"
+                element={
+                  <PrivateRoute roles={["admin", "branch"]}>
+                    <CashPage />
+                  </PrivateRoute>
+                }
+              />
+
 
               {/* Default redirect – foydalanuvchi role bo‘yicha */}
               <Route

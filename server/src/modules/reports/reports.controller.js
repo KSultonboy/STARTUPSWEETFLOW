@@ -1,17 +1,23 @@
+// server/src/modules/reports/reports.controller.js
 const service = require('./reports.service');
 
 async function getOverview(req, res) {
     try {
-        let { date } = req.query;
+        let { date, mode } = req.query;
 
-        // Sana berilmasa – bugungi sanani olamiz (YYYY-MM-DD)
+        // Sana berilmasa – bugungi sana
         if (!date) {
             const now = new Date();
             date = now.toISOString().slice(0, 10);
         }
 
-        const data = await service.getOverview(date);
-        res.json({ date, ...data });
+        // Mode berilmasa – kunlik
+        if (!mode) {
+            mode = 'day'; // day | week | month | year
+        }
+
+        const data = await service.getOverview(date, mode);
+        res.json({ date, mode, ...data });
     } catch (err) {
         console.error('getOverview error:', err);
         res.status(500).json({ message: 'Hisobotni olishda xatolik' });

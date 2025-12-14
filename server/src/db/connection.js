@@ -26,6 +26,7 @@ db.serialize(() => {
       name TEXT NOT NULL,
       code TEXT UNIQUE,            -- masalan: XONQA, URGANCH
       location TEXT,
+      branch_type TEXT NOT NULL DEFAULT 'BRANCH',  -- BRANCH | OUTLET
       is_active INTEGER DEFAULT 1,
       use_central_stock INTEGER NOT NULL DEFAULT 0, -- 0 = o'z ombori, 1 = markaziy ombor bilan ishlaydi
       created_at TEXT DEFAULT (datetime('now')),
@@ -247,6 +248,20 @@ db.serialize(() => {
     )
   `);
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS cash_entries (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  cash_date TEXT NOT NULL,          -- 'YYYY-MM-DD'
+  branch_id INTEGER NOT NULL,
+  amount REAL NOT NULL,
+  note TEXT,
+  created_by INTEGER,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT
+);
+
+  `);
+
   // === INDEKSLAR ===
 
   db.run(`
@@ -288,6 +303,15 @@ db.serialize(() => {
     CREATE INDEX IF NOT EXISTS idx_return_items_return
     ON return_items(return_id)
   `);
+  db.run(
+    `ALTER TABLE branches ADD COLUMN branch_type TEXT NOT NULL DEFAULT 'BRANCH'`,
+    (err) => {
+      if (err && !err.message.includes("duplicate column")) {
+        console.error("branches jadvaliga branch_type qo'shishda xato:", err.message);
+      }
+    }
+  );
+
 });
 
 // Promise asosidagi helperlar

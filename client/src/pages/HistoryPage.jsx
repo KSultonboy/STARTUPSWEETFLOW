@@ -1,6 +1,6 @@
 // client/src/pages/HistoryPage.jsx
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
@@ -10,16 +10,21 @@ import HistoryTable from "../components/history/HistoryTable";
 function HistoryPage() {
     const { user } = useAuth(); // { id, role, branch_id, branch_name }
     const navigate = useNavigate();
+    const location = useLocation();
 
     const isAdmin = user?.role === "admin";
     const isProduction = user?.role === "production";
     const isSales = user?.role === "sales";
 
+    // URL query parametridan boshlang'ich typeFilterni olamiz (masalan: ?type=production)
+    const searchParams = new URLSearchParams(location.search);
+    const initialTypeFromUrl = searchParams.get("type") || "all";
+
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(false);
 
     // Filtrlar (faqat admin uchun)
-    const [typeFilter, setTypeFilter] = useState("all");
+    const [typeFilter, setTypeFilter] = useState(initialTypeFromUrl);
     const [branchFilter, setBranchFilter] = useState("all");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
@@ -44,6 +49,7 @@ function HistoryPage() {
             }
 
             if (isProduction) {
+                // Ishlab chiqarish xodimlari faqat production tarixini ko'radi
                 params.type = "production";
             }
 
@@ -65,7 +71,7 @@ function HistoryPage() {
     useEffect(() => {
         loadHistory();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [typeFilter, branchFilter, fromDate, toDate]);
+    }, [typeFilter, branchFilter, fromDate, toDate, isProduction, isSales]);
 
     // --- Amal tugmalari handlerlari ---
 
