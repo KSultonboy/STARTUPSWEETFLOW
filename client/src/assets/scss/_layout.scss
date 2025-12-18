@@ -372,8 +372,17 @@
 
     /* Adjust topbar for mobile */
     .app-topbar {
-        padding: 10px;
-        margin-bottom: 20px;
+        padding: 8px 10px;
+        margin-bottom: 14px;
+        gap: 8px;
+    }
+
+    .app-topbar-right {
+        gap: 8px;
+    }
+
+    .app-user {
+        padding: 4px 8px;
     }
 }
 

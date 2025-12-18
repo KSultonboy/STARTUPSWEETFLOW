@@ -84,7 +84,15 @@ export default function AppLayout() {
                         )}
                     </div>
 
-                    <nav className="app-nav-vertical">
+                    <nav
+                        className="app-nav-vertical"
+                        onClick={() => {
+                            // Mobilda menyudan biror link bosilganda sidebarmi yopib qo'yamiz
+                            if (window.innerWidth < 768) {
+                                setSidebarCollapsed(true);
+                            }
+                        }}
+                    >
                         {/* ADMIN MENYU */}
                         {isAdmin && (
                             <>
