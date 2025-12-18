@@ -1,6 +1,7 @@
 // server/src/modules/production/production.service.js
 
 const repo = require("./production.repository");
+const { get, run } = require("../../db/connection");
 
 function validateBatchInput(data = {}) {
     const { batch_date, shift, note, created_by, items } = data;
@@ -38,39 +39,66 @@ function validateBatchInput(data = {}) {
     return cleaned;
 }
 
-async function createBatch(data) {
+async function createBatch(tenantId, data) {
     const valid = validateBatchInput(data);
-    return repo.createBatch(valid);
+
+    // Har bir pozitsiya bo'yicha: agar mahsulot birligi 'kg' bo'lmasa va barcode yo'q bo'lsa,
+    // avtomatik barcode generatsiya qilamiz (faqat bir marta).
+    for (const item of valid.items) {
+        const productId = item.product_id;
+        const product = await get(
+            `SELECT id, unit, barcode FROM products WHERE id = ? AND tenant_id = ?`,
+            [productId, tenantId]
+        );
+        if (!product) continue;
+
+        const unit = String(product.unit || "").toLowerCase();
+        const hasBarcode = !!(product.barcode && String(product.barcode).trim());
+
+        if (unit !== "kg" && !hasBarcode) {
+            // 13 xonali raqam: 4 + (tenantId + productId) padded
+            const raw = `${tenantId}${product.id}`.replace(/\D/g, "");
+            const padded = raw.padStart(12, "0");
+            const barcode = `4${padded.slice(-12)}`;
+
+            await run(
+                `UPDATE products SET barcode = ? WHERE id = ? AND tenant_id = ?`,
+                [barcode, product.id, tenantId]
+            );
+        }
+    }
+
+    return repo.createBatch(tenantId, valid);
 }
 
-async function getBatches(query) {
+async function getBatches(tenantId, query) {
     const date = query?.date || null;
-    return repo.findBatches({ date });
+    return repo.findBatches({ tenantId, date });
 }
 
-async function getBatchById(id) {
-    const batch = await repo.findBatchById(id);
+async function getBatchById(tenantId, id) {
+    const batch = await repo.findBatchById(tenantId, id);
     if (!batch) {
         throw new Error("Partiya topilmadi");
     }
     return batch;
 }
 
-async function updateBatch(id, data) {
-    const exists = await repo.findBatchById(id);
+async function updateBatch(tenantId, id, data) {
+    const exists = await repo.findBatchById(tenantId, id);
     if (!exists) {
         throw new Error("Partiya topilmadi");
     }
     const valid = validateBatchInput(data);
-    return repo.updateBatch(id, valid);
+    return repo.updateBatch(tenantId, id, valid);
 }
 
-async function deleteBatch(id) {
-    const exists = await repo.findBatchById(id);
+async function deleteBatch(tenantId, id) {
+    const exists = await repo.findBatchById(tenantId, id);
     if (!exists) {
         throw new Error("Partiya topilmadi");
     }
-    await repo.deleteBatch(id);
+    await repo.deleteBatch(tenantId, id);
 }
 
 module.exports = {

@@ -2,7 +2,7 @@
 
 const { run, all, get } = require("../../db/connection");
 
-async function findAll() {
+async function findAll(tenantId) {
   const query = `
     SELECT 
       u.id,
@@ -17,12 +17,13 @@ async function findAll() {
       b.code AS branch_code
     FROM users u
     LEFT JOIN branches b ON u.branch_id = b.id
+    WHERE u.tenant_id = ?
     ORDER BY u.id DESC
   `;
-  return all(query);
+  return all(query, [tenantId]);
 }
 
-async function findById(id) {
+async function findById(tenantId, id) {
   const query = `
     SELECT 
       u.id,
@@ -37,30 +38,33 @@ async function findById(id) {
       b.code AS branch_code
     FROM users u
     LEFT JOIN branches b ON u.branch_id = b.id
-    WHERE u.id = ?
+    WHERE u.id = ? AND u.tenant_id = ?
   `;
-  return get(query, [id]);
+  return get(query, [id, tenantId]);
 }
 
 // LOGIN uchun username bo'yicha user (password_hash bilan)
-async function findByUsername(username) {
-  return get(
-    `
-    SELECT *
-    FROM users
-    WHERE username = ?
-  `,
-    [username]
-  );
+async function findByUsername(username, tenantId) {
+  // If tenantId provided, strict check
+  if (tenantId) {
+    return get(
+      `SELECT * FROM users WHERE username = ? AND tenant_id = ?`,
+      [username, tenantId]
+    );
+  }
+  // Backward compat or loose check (should rely on auth repo generally)
+  return get(`SELECT * FROM users WHERE username = ?`, [username]);
 }
 
 // Eski auth modul moslashishi uchun alias
 async function findWithPasswordByUsername(username) {
-  // aynan findByUsername bilan bir xil ish qiladi
+  // Auth repo alohida, bu general users moduli.
+  // Bu yerda tenantId siz chaqirsa xato bo'lishi mumkin multi-tenantda.
+  // Ammo login vaqtida auth.repository ishlatiladi.
   return findByUsername(username);
 }
 
-async function create({
+async function create(tenantId, {
   full_name,
   username,
   password_hash,
@@ -70,16 +74,17 @@ async function create({
 }) {
   const result = await run(
     `
-    INSERT INTO users (full_name, username, password_hash, role, branch_id, is_active, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+    INSERT INTO users (tenant_id, full_name, username, password_hash, role, branch_id, is_active, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
   `,
-    [full_name, username, password_hash, role, branch_id || null, is_active ? 1 : 1]
+    [tenantId, full_name, username, password_hash, role, branch_id || null, is_active ? 1 : 1]
   );
   const id = result.lastID;
-  return findById(id);
+  return findById(tenantId, id);
 }
 
 async function update(
+  tenantId,
   id,
   { full_name, username, password_hash, role, branch_id, is_active }
 ) {
@@ -95,7 +100,7 @@ async function update(
       is_active   = ?,
       password_hash = COALESCE(?, password_hash),
       updated_at  = datetime('now')
-    WHERE id = ?
+    WHERE id = ? AND tenant_id = ?
   `,
     [
       full_name,
@@ -105,21 +110,22 @@ async function update(
       is_active ? 1 : 0,
       password_hash || null,
       id,
+      tenantId
     ]
   );
 
-  return findById(id);
+  return findById(tenantId, id);
 }
 
-async function remove(id) {
-  await run(`DELETE FROM users WHERE id = ?`, [id]);
+async function remove(tenantId, id) {
+  await run(`DELETE FROM users WHERE id = ? AND tenant_id = ?`, [id, tenantId]);
 }
 
 module.exports = {
   findAll,
   findById,
   findByUsername,
-  findWithPasswordByUsername, // <-- auth shu nom bilan ishlata oladi
+  findWithPasswordByUsername,
   create,
   update,
   remove,

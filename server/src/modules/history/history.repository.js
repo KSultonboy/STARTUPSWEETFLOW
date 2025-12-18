@@ -17,7 +17,10 @@ const { all } = require('../../db/connection');
  *  - amount (agar mavjud bo'lsa, aks holda null)
  *  - status  (transfer / return uchun; boshqalar NULL)
  */
-async function getActivities({ limit, offset, type, dateFrom, dateTo, branchId }) {
+async function getActivities({ tenantId, limit, offset, type, dateFrom, dateTo, branchId }) {
+  if (!tenantId) {
+    throw new Error('tenantId is required for history');
+  }
   const unionParts = [];
   let params = [];
 
@@ -25,8 +28,8 @@ async function getActivities({ limit, offset, type, dateFrom, dateTo, branchId }
      1) SALES (sotuvlar)
   ----------------------------------------------------- */
   if (type === 'all' || type === 'sale') {
-    const conds = [];
-    const p = [];
+    const conds = ['s.tenant_id = ?'];
+    const p = [tenantId];
 
     if (dateFrom) {
       conds.push('s.sale_date >= ?');
@@ -65,8 +68,8 @@ async function getActivities({ limit, offset, type, dateFrom, dateTo, branchId }
      2) PRODUCTION (production_batches)
   ----------------------------------------------------- */
   if (type === 'all' || type === 'production') {
-    const conds = [];
-    const p = [];
+    const conds = ['pb.tenant_id = ?'];
+    const p = [tenantId];
 
     if (dateFrom) {
       conds.push('pb.batch_date >= ?');
@@ -99,8 +102,8 @@ async function getActivities({ limit, offset, type, dateFrom, dateTo, branchId }
      3) TRANSFERLAR
   ----------------------------------------------------- */
   if (type === 'all' || type === 'transfer') {
-    const conds = [];
-    const p = [];
+    const conds = ['t.tenant_id = ?'];
+    const p = [tenantId];
 
     if (dateFrom) {
       conds.push('DATE(t.created_at) >= ?');
@@ -147,8 +150,8 @@ async function getActivities({ limit, offset, type, dateFrom, dateTo, branchId }
      4) RETURNS (VAZVRATLAR)
   ----------------------------------------------------- */
   if (type === 'all' || type === 'return') {
-    const conds = [];
-    const p = [];
+    const conds = ['r.tenant_id = ?'];
+    const p = [tenantId];
 
     if (dateFrom) {
       conds.push('r.return_date >= ?');

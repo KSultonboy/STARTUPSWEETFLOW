@@ -3,7 +3,7 @@ const service = require('./branches.service');
 // GET /api/branches
 async function getBranches(req, res) {
     try {
-        const branches = await service.getBranches();
+        const branches = await service.getBranches(req.tenantId);
         res.json(branches);
     } catch (err) {
         console.error('getBranches error:', err);
@@ -16,7 +16,7 @@ async function getBranches(req, res) {
 // POST /api/branches
 async function createBranch(req, res) {
     try {
-        const created = await service.createBranch(req.body || {});
+        const created = await service.createBranch(req.tenantId, req.body || {});
         res.status(201).json(created);
     } catch (err) {
         console.error('createBranch error:', err);
@@ -30,7 +30,7 @@ async function createBranch(req, res) {
 async function updateBranch(req, res) {
     try {
         const { id } = req.params;
-        const updated = await service.updateBranch(id, req.body || {});
+        const updated = await service.updateBranch(req.tenantId, id, req.body || {});
         res.json(updated);
     } catch (err) {
         console.error('updateBranch error:', err);
@@ -44,7 +44,7 @@ async function updateBranch(req, res) {
 async function deleteBranch(req, res) {
     try {
         const { id } = req.params;
-        const result = await service.deleteBranch(id);
+        const result = await service.deleteBranch(req.tenantId, id);
         res.json(result);
     } catch (err) {
         console.error('deleteBranch error:', err);

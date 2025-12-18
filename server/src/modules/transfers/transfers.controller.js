@@ -5,7 +5,7 @@ const service = require("./transfers.service");
 async function createTransfer(req, res) {
     try {
         const user = req.user || null;
-        const transfer = await service.createTransfer(req.body || {}, user);
+        const transfer = await service.createTransfer(req.tenantId, req.body || {}, user);
         res.status(201).json(transfer);
     } catch (err) {
         console.error("createTransfer error:", err);
@@ -17,7 +17,7 @@ async function createTransfer(req, res) {
 
 async function getAllTransfers(req, res) {
     try {
-        const list = await service.getAllTransfers();
+        const list = await service.getAllTransfers(req.tenantId);
         res.json(list);
     } catch (err) {
         console.error("getAllTransfers error:", err);
@@ -30,7 +30,7 @@ async function getTransfer(req, res) {
         const id = Number(req.params.id);
         if (!id) return res.status(400).json({ message: "Noto'g'ri ID" });
 
-        const transfer = await service.getTransferById(id);
+        const transfer = await service.getTransferById(req.tenantId, id);
         res.json(transfer);
     } catch (err) {
         console.error("getTransfer error:", err);
@@ -47,7 +47,7 @@ async function getTransfer(req, res) {
 async function getIncomingForBranch(req, res) {
     try {
         const branchId = Number(req.params.branchId);
-        const list = await service.getIncomingForBranch(branchId);
+        const list = await service.getIncomingForBranch(req.tenantId, branchId);
         res.json(list);
     } catch (err) {
         console.error("getIncomingForBranch error:", err);
@@ -67,7 +67,7 @@ async function acceptItem(req, res) {
             return res.status(400).json({ message: "Noto'g'ri parametrlar" });
         }
 
-        const updated = await service.acceptItem(transferId, itemId, branchId);
+        const updated = await service.acceptItem(req.tenantId, transferId, itemId, branchId);
         res.json(updated);
     } catch (err) {
         console.error("acceptItem error:", err);
@@ -87,7 +87,7 @@ async function rejectItem(req, res) {
             return res.status(400).json({ message: "Noto'g'ri parametrlar" });
         }
 
-        const updated = await service.rejectItem(transferId, itemId, branchId);
+        const updated = await service.rejectItem(req.tenantId, transferId, itemId, branchId);
         res.json(updated);
     } catch (err) {
         console.error("rejectItem error:", err);
@@ -106,7 +106,7 @@ async function updateTransfer(req, res) {
         const id = Number(req.params.id);
         if (!id) return res.status(400).json({ message: "Noto'g'ri ID" });
 
-        const updated = await service.updateTransfer(id, req.body || {}, user);
+        const updated = await service.updateTransfer(req.tenantId, id, req.body || {}, user);
         res.json(updated);
     } catch (err) {
         console.error("updateTransfer error:", err);
@@ -124,7 +124,7 @@ async function cancelTransfer(req, res) {
         const id = Number(req.params.id);
         if (!id) return res.status(400).json({ message: "Noto'g'ri ID" });
 
-        await service.cancelTransfer(id);
+        await service.cancelTransfer(req.tenantId, id);
         res.json({ success: true });
     } catch (err) {
         console.error("cancelTransfer error:", err);

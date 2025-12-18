@@ -1,19 +1,19 @@
 const { run, get, all } = require('../../db/connection');
 
 // Yangi expense header
-async function insertExpense({ expense_date, type, total_amount, description, created_by }) {
+async function insertExpense(tenantId, { expense_date, type, total_amount, description, created_by }) {
   const res = await run(
     `
-      INSERT INTO expenses (expense_date, type, total_amount, description, created_by, created_at)
-      VALUES (?, ?, ?, ?, ?, datetime('now'))
+      INSERT INTO expenses (tenant_id, expense_date, type, total_amount, description, created_by, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
     `,
-    [expense_date, type, total_amount, description || null, created_by || null]
+    [tenantId, expense_date, type, total_amount, description || null, created_by || null]
   );
   return res.lastID;
 }
 
 // Expense headerni yangilash
-async function updateExpenseHeader(id, { expense_date, type, total_amount, description }) {
+async function updateExpenseHeader(tenantId, id, { expense_date, type, total_amount, description }) {
   await run(
     `
       UPDATE expenses
@@ -22,21 +22,22 @@ async function updateExpenseHeader(id, { expense_date, type, total_amount, descr
         type = ?,
         total_amount = ?,
         description = ?
-      WHERE id = ?
+      WHERE id = ? AND tenant_id = ?
     `,
-    [expense_date, type, total_amount, description || null, id]
+    [expense_date, type, total_amount, description || null, id, tenantId]
   );
 }
 
 // Bandlarni kiritish
-async function insertExpenseItem(expenseId, item) {
+async function insertExpenseItem(tenantId, expenseId, item) {
   await run(
     `
       INSERT INTO expense_items
-        (expense_id, product_id, name, quantity, unit_price, total_price)
-      VALUES (?, ?, ?, ?, ?, ?)
+        (tenant_id, expense_id, product_id, name, quantity, unit_price, total_price)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `,
     [
+      tenantId,
       expenseId,
       item.product_id || null,
       item.name || null,
@@ -48,17 +49,17 @@ async function insertExpenseItem(expenseId, item) {
 }
 
 // Bir xarajatga tegishli bandlarni o'chirish
-async function deleteExpenseItems(expenseId) {
-  await run(`DELETE FROM expense_items WHERE expense_id = ?`, [expenseId]);
+async function deleteExpenseItems(tenantId, expenseId) {
+  await run(`DELETE FROM expense_items WHERE expense_id = ? AND tenant_id = ?`, [expenseId, tenantId]);
 }
 
 // Bitta xarajat headerini o'chirish
-async function deleteExpense(id) {
-  await run(`DELETE FROM expenses WHERE id = ?`, [id]);
+async function deleteExpense(tenantId, id) {
+  await run(`DELETE FROM expenses WHERE id = ? AND tenant_id = ?`, [id, tenantId]);
 }
 
 // header + items
-async function findById(id) {
+async function findById(tenantId, id) {
   const header = await get(
     `
       SELECT
@@ -70,9 +71,9 @@ async function findById(id) {
         e.created_by,
         e.created_at
       FROM expenses e
-      WHERE e.id = ?
+      WHERE e.id = ? AND e.tenant_id = ?
     `,
-    [id]
+    [id, tenantId]
   );
 
   if (!header) return null;
@@ -89,17 +90,17 @@ async function findById(id) {
         ei.total_price
       FROM expense_items ei
       LEFT JOIN products p ON p.id = ei.product_id
-      WHERE ei.expense_id = ?
+      WHERE ei.expense_id = ? AND ei.tenant_id = ?
       ORDER BY ei.id ASC
     `,
-    [id]
+    [id, tenantId]
   );
 
   return { header, items };
 }
 
 // Ro'yxat (type bo'yicha faqat headerlar)
-async function listByType(type) {
+async function listByType(tenantId, type) {
   const rows = await all(
     `
       SELECT
@@ -111,29 +112,21 @@ async function listByType(type) {
         e.created_by,
         e.created_at
       FROM expenses e
-      WHERE e.type = ?
+      WHERE e.type = ? AND e.tenant_id = ?
       ORDER BY e.expense_date DESC, e.id DESC
     `,
-    [type]
+    [type, tenantId]
   );
   return rows;
 }
 
-/**
- * Ombor harakati yozish (kirim/chiqim)
- * Hozir dekor xarajatlari uchun faqat 'IN' ishlatamiz.
- *
- * warehouse_movements jadvalidan getCurrentStock funksiyasi faqat
- * product_id, branch_id, movement_type, quantity ustunlarini ishlatyapti,
- * shuning uchun shu to‘rttasini yozsak kifoya.
- */
-async function insertWarehouseMovement({ product_id, quantity, branch_id = null, movement_type = 'IN' }) {
+async function insertWarehouseMovement(tenantId, { product_id, quantity, branch_id = null, movement_type = 'IN' }) {
   await run(
     `
-      INSERT INTO warehouse_movements (product_id, branch_id, movement_type, quantity)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO warehouse_movements (tenant_id, product_id, branch_id, movement_type, quantity)
+      VALUES (?, ?, ?, ?, ?)
     `,
-    [product_id, branch_id, movement_type, quantity]
+    [tenantId, product_id, branch_id, movement_type, quantity]
   );
 }
 

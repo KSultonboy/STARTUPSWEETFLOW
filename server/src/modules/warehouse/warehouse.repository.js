@@ -4,7 +4,7 @@ const { all, get } = require('../../db/connection');
 /**
  * Filial haqida ma'lumot olish (use_central_stock va branch_type ni bilish uchun)
  */
-async function getBranchById(branchId) {
+async function getBranchById(tenantId, branchId) {
   if (!branchId) return null;
 
   const row = await get(
@@ -15,9 +15,9 @@ async function getBranchById(branchId) {
         IFNULL(use_central_stock, 0) AS use_central_stock,
         UPPER(IFNULL(branch_type, 'BRANCH')) AS branch_type
       FROM branches
-      WHERE id = ?
+      WHERE id = ? AND tenant_id = ?
     `,
-    [branchId]
+    [branchId, tenantId]
   );
 
   return row || null;
@@ -25,28 +25,12 @@ async function getBranchById(branchId) {
 
 /**
  * Hozirgi qoldiqni qaytaradi:
- *   - product_id
- *   - product_name
- *   - unit
- *   - branch_id (NULL bo‘lsa – Markaziy ombor)
- *   - branch_name
- *   - quantity (hozirgi qoldiq)
- *
  * MANTIQ:
  *   - branches.use_central_stock = 1 BO'LSA YOKI branch_type = 'OUTLET' BO'LSA
  *     o‘sha filial/do‘konning harakatlari "Markaziy ombor" bilan BIRGA hisoblanadi.
  *     Ya'ni logical_branch_id = NULL bo‘ladi va Markaziy ombor qatori bilan qo‘shiladi.
- *
- *   - branchId parametri:
- *       * null / undefined => hamma (markaziy + barcha alohida filiallar,
- *                                   do‘konlar esa Markaziy bilan qo‘shib yuboriladi)
- *       * 'central'        => faqat Markaziy ombor (shu bilan birga ishlaydigan
- *                             do‘kon va use_central_stock=1 bo‘lgan filiallar bilan)
- *       * <id> (raqam)     => agar bu filial/do‘kon use_central_stock=1 YOKI OUTLET bo‘lsa
- *                             => Markaziy ombor qoldig‘i
- *                             aks holda => faqat o‘sha filial qoldig‘i
  */
-async function getCurrentStock(branchId) {
+async function getCurrentStock(tenantId, branchId) {
   // Qaysi rejimda ishlayotganimizni aniqlaymiz
   let mode = 'all'; // 'all' | 'central' | 'branch' | 'none'
   let branchFilterId = null;
@@ -58,7 +42,7 @@ async function getCurrentStock(branchId) {
     mode = 'central';
   } else {
     // Muayyan filial/do‘kon id bo'yicha kelgan bo'lsa (branch user yoki admin filtri)
-    const branch = await getBranchById(branchId);
+    const branch = await getBranchById(tenantId, branchId);
 
     if (!branch) {
       mode = 'none'; // bunday filial yo‘q
@@ -78,7 +62,7 @@ async function getCurrentStock(branchId) {
   }
 
   let whereClause = '';
-  const params = [];
+  const params = [tenantId]; // Tenant ID har doim birinchi parametr bo'lishi kerak subqueryda emas, balki join/where da
 
   if (mode === 'central') {
     // faqat Markaziy ombor (va OUTLET + use_central_stock=1 bo‘lganlar bilan birga)
@@ -126,6 +110,7 @@ async function getCurrentStock(branchId) {
       FROM warehouse_movements wm
       JOIN products p ON p.id = wm.product_id
       LEFT JOIN branches b ON b.id = wm.branch_id
+      WHERE wm.tenant_id = ? 
     ) x
     ${whereClause}
     GROUP BY x.product_id, x.logical_branch_id
@@ -139,5 +124,6 @@ async function getCurrentStock(branchId) {
 }
 
 module.exports = {
+  getBranchById,
   getCurrentStock,
 };

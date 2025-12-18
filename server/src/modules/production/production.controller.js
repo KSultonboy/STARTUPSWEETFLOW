@@ -4,7 +4,7 @@ const service = require("./production.service");
 
 async function createBatch(req, res) {
     try {
-        const batch = await service.createBatch(req.body);
+        const batch = await service.createBatch(req.tenantId, req.body);
         res.status(201).json(batch);
     } catch (err) {
         console.error("createBatch error:", err);
@@ -14,7 +14,7 @@ async function createBatch(req, res) {
 
 async function getBatches(req, res) {
     try {
-        const list = await service.getBatches(req.query);
+        const list = await service.getBatches(req.tenantId, req.query);
         res.json(list);
     } catch (err) {
         console.error("getBatches error:", err);
@@ -28,7 +28,7 @@ async function getBatch(req, res) {
         if (!id) {
             return res.status(400).json({ message: "Noto'g'ri ID" });
         }
-        const batch = await service.getBatchById(id);
+        const batch = await service.getBatchById(req.tenantId, id);
         res.json(batch);
     } catch (err) {
         console.error("getBatch error:", err);
@@ -45,7 +45,7 @@ async function updateBatch(req, res) {
         if (!id) {
             return res.status(400).json({ message: "Noto'g'ri ID" });
         }
-        const batch = await service.updateBatch(id, req.body);
+        const batch = await service.updateBatch(req.tenantId, id, req.body);
         res.json(batch);
     } catch (err) {
         console.error("updateBatch error:", err);
@@ -62,7 +62,7 @@ async function deleteBatch(req, res) {
         if (!id) {
             return res.status(400).json({ message: "Noto'g'ri ID" });
         }
-        await service.deleteBatch(id);
+        await service.deleteBatch(req.tenantId, id);
         res.status(204).end();
     } catch (err) {
         console.error("deleteBatch error:", err);

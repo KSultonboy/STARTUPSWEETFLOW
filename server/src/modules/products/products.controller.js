@@ -2,7 +2,7 @@ const service = require('./products.service');
 
 async function getAllProducts(req, res) {
     try {
-        const products = await service.getAllProducts();
+        const products = await service.getAllProducts(req.tenantId);
         res.json(products);
     } catch (err) {
         console.error('getAllProducts error:', err);
@@ -12,7 +12,7 @@ async function getAllProducts(req, res) {
 
 async function getDecorationProducts(req, res) {
     try {
-        const products = await service.getDecorationProducts();
+        const products = await service.getDecorationProducts(req.tenantId);
         res.json(products);
     } catch (err) {
         console.error('getDecorationProducts error:', err);
@@ -22,7 +22,7 @@ async function getDecorationProducts(req, res) {
 
 async function getUtilityProducts(req, res) {
     try {
-        const products = await service.getUtilityProducts();
+        const products = await service.getUtilityProducts(req.tenantId);
         res.json(products);
     } catch (err) {
         console.error('getUtilityProducts error:', err);
@@ -32,7 +32,7 @@ async function getUtilityProducts(req, res) {
 
 async function createProduct(req, res) {
     try {
-        const product = await service.createProduct(req.body);
+        const product = await service.createProduct(req.tenantId, req.body);
         res.status(201).json(product);
     } catch (err) {
         console.error('createProduct error:', err);
@@ -46,7 +46,7 @@ async function updateProduct(req, res) {
         if (!id) {
             return res.status(400).json({ message: 'Noto‘g‘ri ID' });
         }
-        const product = await service.updateProduct(id, req.body);
+        const product = await service.updateProduct(req.tenantId, id, req.body);
         res.json(product);
     } catch (err) {
         console.error('updateProduct error:', err);
@@ -63,7 +63,7 @@ async function deleteProduct(req, res) {
         if (!id) {
             return res.status(400).json({ message: 'Noto‘g‘ri ID' });
         }
-        await service.deleteProduct(id);
+        await service.deleteProduct(req.tenantId, id);
         res.status(204).end();
     } catch (err) {
         console.error('deleteProduct error:', err);
@@ -74,6 +74,23 @@ async function deleteProduct(req, res) {
     }
 }
 
+async function getByBarcode(req, res) {
+    try {
+        const { code } = req.params;
+        if (!code) {
+            return res.status(400).json({ message: 'Shtrix kod kerak' });
+        }
+        const product = await service.getProductByBarcode(req.tenantId, code);
+        if (!product) {
+            return res.status(404).json({ message: 'Mahsulot topilmadi' });
+        }
+        res.json(product);
+    } catch (err) {
+        console.error('getByBarcode error:', err);
+        res.status(400).json({ message: err.message || 'Xatolik' });
+    }
+}
+
 module.exports = {
     getAllProducts,
     getDecorationProducts,
@@ -81,4 +98,5 @@ module.exports = {
     createProduct,
     updateProduct,
     deleteProduct,
+    getByBarcode,
 };

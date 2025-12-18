@@ -8,7 +8,7 @@ const { run, get, all } = require('../../db/connection');
  *  - warehouse_movements:
  *      * filial omboridan OUT (rezerv) — APPROVE/CANCEL paytida yana harakat bo'ladi
  */
-async function createReturn({ branchId, date, comment, items, userId }) {
+async function createReturn({ tenantId, branchId, date, comment, items, userId }) {
     const returnDate = date || new Date().toISOString().slice(0, 10);
 
     await run('BEGIN TRANSACTION');
@@ -17,10 +17,10 @@ async function createReturn({ branchId, date, comment, items, userId }) {
         // 1) returns header
         const result = await run(
             `
-        INSERT INTO returns (branch_id, return_date, status, comment, created_by)
-        VALUES (?, ?, 'PENDING', ?, ?)
+        INSERT INTO returns (tenant_id, branch_id, return_date, status, comment, created_by)
+        VALUES (?, ?, ?, 'PENDING', ?, ?)
       `,
-            [branchId, returnDate, comment || null, userId || null]
+            [tenantId, branchId, returnDate, comment || null, userId || null]
         );
 
         const returnId = result.lastID;
@@ -31,10 +31,11 @@ async function createReturn({ branchId, date, comment, items, userId }) {
 
             await run(
                 `
-          INSERT INTO return_items (return_id, product_id, quantity, unit, reason, status)
-          VALUES (?, ?, ?, ?, ?, 'PENDING')
+          INSERT INTO return_items (tenant_id, return_id, product_id, quantity, unit, reason, status)
+          VALUES (?, ?, ?, ?, ?, ?, 'PENDING')
         `,
                 [
+                    tenantId,
                     returnId,
                     item.product_id,
                     qty,
@@ -46,10 +47,10 @@ async function createReturn({ branchId, date, comment, items, userId }) {
             // Filial (yoki do'kon) omboridan OUT (rezerv)
             await run(
                 `
-          INSERT INTO warehouse_movements (product_id, branch_id, movement_type, source_type, source_id, quantity)
-          VALUES (?, ?, 'OUT', 'RETURN', ?, ?)
+          INSERT INTO warehouse_movements (tenant_id, product_id, branch_id, movement_type, source_type, source_id, quantity)
+          VALUES (?, ?, ?, 'OUT', 'RETURN', ?, ?)
         `,
-                [item.product_id, branchId, returnId, qty]
+                [tenantId, item.product_id, branchId, returnId, qty]
             );
         }
 
@@ -68,9 +69,9 @@ async function createReturn({ branchId, date, comment, items, userId }) {
           r.created_at
         FROM returns r
         LEFT JOIN branches b ON b.id = r.branch_id
-        WHERE r.id = ?
+        WHERE r.id = ? AND r.tenant_id = ?
       `,
-            [returnId]
+            [returnId, tenantId]
         );
 
         return header;
@@ -83,9 +84,9 @@ async function createReturn({ branchId, date, comment, items, userId }) {
 /**
  * Qaytishlar ro‘yxati (header + agregatlar)
  */
-async function listReturns({ branchId, status, dateFrom, dateTo, limit, offset }) {
-    const params = [];
-    const conds = [];
+async function listReturns({ tenantId, branchId, status, dateFrom, dateTo, limit, offset }) {
+    const params = [tenantId];
+    const conds = ['r.tenant_id = ?'];
 
     if (branchId) {
         conds.push('r.branch_id = ?');
@@ -147,7 +148,7 @@ async function listReturns({ branchId, status, dateFrom, dateTo, limit, offset }
 /**
  * Bitta qaytishning to‘liq ma’lumoti (header + items)
  */
-async function getReturnById(id) {
+async function getReturnById(tenantId, id) {
     const header = await get(
         `
       SELECT
@@ -161,9 +162,9 @@ async function getReturnById(id) {
         r.created_at
       FROM returns r
       LEFT JOIN branches b ON b.id = r.branch_id
-      WHERE r.id = ?
+      WHERE r.id = ? AND r.tenant_id = ?
     `,
-        [id]
+        [id, tenantId]
     );
 
     if (!header) return null;
@@ -625,5 +626,3 @@ module.exports = {
   updateReturn,
   deleteReturn,
 };
-
-

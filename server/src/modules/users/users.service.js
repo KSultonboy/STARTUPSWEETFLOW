@@ -35,21 +35,53 @@ function validateUserInput(data = {}, { isUpdate = false } = {}) {
     return cleaned;
 }
 
-async function getUsers() {
-    return repo.findAll();
+async function getUsers(tenantId) {
+    return repo.findAll(tenantId);
 }
 
-async function createUser(data) {
+/**
+ * Check if the role is allowed based on enabled tenant features.
+ * mapping:
+ *   sales -> [ 'seller', 'cashier' ]
+ *   production -> [ 'baker', 'decorator', 'technologist' ]
+ *   warehouse -> [ 'warehouse_man' ]
+ */
+function checkRoleAccess(role, features = {}) {
+    const r = role.toLowerCase();
+
+    // Mapping definition
+    const map = {
+        seller: 'sales',
+        cashier: 'sales',
+        baker: 'production',
+        decorator: 'production',
+        technologist: 'production',
+        warehouse_man: 'warehouse'
+    };
+
+    const requiredFeature = map[r];
+
+    // Agar bu rol uchun feature talab qilinsa va u feature DISABLED bo'lsa
+    if (requiredFeature && features[requiredFeature] === false) {
+        throw new Error(`Ushbu rolni ('${role}') yaratish uchun '${requiredFeature}' moduli yoqilgan bo'lishi kerak.`);
+    }
+}
+
+async function createUser(tenantId, data, tenantFeatures = {}) {
     const cleaned = validateUserInput(data, { isUpdate: false });
 
-    const existing = await repo.findByUsername(cleaned.username);
+    // 🛡️ Access Control Check
+    checkRoleAccess(cleaned.role, tenantFeatures);
+
+    // Ensure username is unique WITHIN tenant
+    const existing = await repo.findByUsername(cleaned.username, tenantId);
     if (existing) {
-        throw new Error("Bu username band");
+        throw new Error("Bu username ushbu do'konda band");
     }
 
     const password_hash = await bcrypt.hash(cleaned.password, SALT_ROUNDS);
 
-    return repo.create({
+    return repo.create(tenantId, {
         full_name: cleaned.full_name,
         username: cleaned.username,
         password_hash,
@@ -59,8 +91,13 @@ async function createUser(data) {
     });
 }
 
-async function updateUser(id, data) {
-    const existing = await repo.findById(id);
+async function updateUser(tenantId, id, data, tenantFeatures = {}) {
+    // Agar rol o'zgarayotgan bo'lsa, uni ham tekshirish kerak
+    if (data.role) {
+        checkRoleAccess(data.role, tenantFeatures);
+    }
+
+    const existing = await repo.findById(tenantId, id);
     if (!existing) {
         throw new Error("User topilmadi");
     }
@@ -72,7 +109,7 @@ async function updateUser(id, data) {
         password_hash = await bcrypt.hash(cleaned.password, SALT_ROUNDS);
     }
 
-    return repo.update(id, {
+    return repo.update(tenantId, id, {
         full_name: cleaned.full_name,
         username: cleaned.username,
         password_hash,
@@ -82,12 +119,12 @@ async function updateUser(id, data) {
     });
 }
 
-async function deleteUser(id) {
-    const existing = await repo.findById(id);
+async function deleteUser(tenantId, id) {
+    const existing = await repo.findById(tenantId, id);
     if (!existing) {
         throw new Error("User topilmadi");
     }
-    await repo.remove(id);
+    await repo.remove(tenantId, id);
 }
 
 module.exports = {

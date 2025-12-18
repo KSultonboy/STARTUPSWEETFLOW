@@ -3,40 +3,63 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { jwtSecret, jwtRefreshSecret } = require('../../config/env');
 const repo = require('./auth.repository');
+const { get } = require('../../db/connection');
+const featuresService = require('../platform/features.service'); // Load features
 
-// Access va refresh uchun maxfiy kalitlar
 const ACCESS_SECRET = jwtSecret;
 const REFRESH_SECRET = jwtRefreshSecret || jwtSecret;
 
-// Access token – qisqa muddat (masalan 15 daqiqa)
 function signAccessToken(payload) {
     return jwt.sign(payload, ACCESS_SECRET, { expiresIn: '15m' });
 }
 
-// Refresh token – uzun muddat (30 kun)
 function signRefreshToken(payload) {
     return jwt.sign(payload, REFRESH_SECRET, { expiresIn: '30d' });
 }
 
-// Foydalanuvchi obyektini frontendga jo'natish uchun format
-function mapUserForClient(user) {
+function mapUserForClient(user, features = {}) {
     if (!user) return null;
     return {
         id: user.id,
         full_name: user.full_name,
         username: user.username,
         role: user.role,
+        tenantId: user.tenant_id,
         branch_id: user.branch_id,
+        features: features
     };
 }
 
-// LOGIN
-async function login({ username, password }) {
+async function login({ username, password, tenantSlug }) {
     if (!username || !password) {
         throw new Error('username va password majburiy');
     }
 
-    const user = await repo.getUserWithPasswordByUsername(username);
+    let tenantId = 1;
+    if (tenantSlug) {
+        const tenant = await get('SELECT id, plan_id FROM tenants WHERE slug = ?', [tenantSlug]);
+        if (tenant) {
+            tenantId = tenant.id;
+            // Agar tenantda plan belgilanmagan bo'lsa, kirishni taqiqlash (Platform Owner bundan mustasno bo'lishi mumkin, lekin slug bilan kirayotgan bo'lsa check qilamiz)
+            if (!tenant.plan_id) {
+                throw new Error('Ushbu do\'kon uchun tarif rejasi belgilanmagan. Iltimos, administratorga murojaat qiling.');
+            }
+
+            // If tenant is suspended due to unpaid billing, block login
+            if (tenant.status === 'SUSPENDED') {
+                throw new Error('To\'lov amalga oshirilmagan. Xizmat bloklangan. Iltimos, balansni to\'ldiring.');
+            }
+        } else {
+            throw new Error('Tenant topilmadi');
+        }
+    }
+
+    const user = await repo.getUserWithPasswordByUsername(username, tenantId);
+
+    if (user && user.tenant_id !== tenantId) {
+        throw new Error('Foydalanuvchi topilmadi');
+    }
+
     if (!user) {
         throw new Error('Foydalanuvchi topilmadi yoki parol noto‘g‘ri');
     }
@@ -53,20 +76,32 @@ async function login({ username, password }) {
     const payload = {
         id: user.id,
         role: user.role,
+        tenantId: user.tenant_id,
         branchId: user.branch_id || null,
     };
 
     const accessToken = signAccessToken(payload);
     const refreshToken = signRefreshToken(payload);
 
+    // Get features
+    const features = await featuresService.getTenantFeatures(user.tenant_id);
+
+    // Get Tenant Info (Name & Expiry)
+    const tenantInfo = await get('SELECT name, contract_end_date, status FROM tenants WHERE id = ?', [user.tenant_id]);
+    const tenantName = tenantInfo ? tenantInfo.name : 'Unknown Tenant';
+    const contractEndDate = tenantInfo ? tenantInfo.contract_end_date : null;
+
+    if (tenantInfo && tenantInfo.status === 'SUSPENDED') {
+        throw new Error('To\'lov amalga oshirilmagan. Xizmat bloklangan.');
+    }
+
     return {
         accessToken,
         refreshToken,
-        user: mapUserForClient(user),
+        user: { ...mapUserForClient(user, features), tenantName, contractEndDate },
     };
 }
 
-// REFRESH – eskirgan access tokenni yangilash
 async function refreshTokens({ refreshToken }) {
     if (!refreshToken) {
         throw new Error('Refresh token majburiy');
@@ -76,11 +111,9 @@ async function refreshTokens({ refreshToken }) {
     try {
         decoded = jwt.verify(refreshToken, REFRESH_SECRET);
     } catch (err) {
-        console.error('refreshTokens verify error:', err);
         throw new Error('Refresh token yaroqsiz yoki muddati tugagan');
     }
 
-    // Userni qayta tekshirib olamiz (bloklangan bo'lishi mumkin)
     const user = await repo.getUserById(decoded.id);
     if (!user || !user.is_active) {
         throw new Error('Foydalanuvchi topilmadi yoki bloklangan');
@@ -89,24 +122,28 @@ async function refreshTokens({ refreshToken }) {
     const payload = {
         id: user.id,
         role: user.role,
+        tenantId: user.tenant_id,
         branchId: user.branch_id || null,
     };
 
     const newAccessToken = signAccessToken(payload);
-    // xohlasang refreshni ham har safar yangilash mumkin
     const newRefreshToken = signRefreshToken(payload);
+
+    // Get features on refresh too
+    const features = await featuresService.getTenantFeatures(user.tenant_id);
+    // Get Tenant Info (Name & Expiry)
+    const tenantInfo = await get('SELECT name, contract_end_date FROM tenants WHERE id = ?', [user.tenant_id]);
+    const tenantName = tenantInfo ? tenantInfo.name : 'Unknown Tenant';
+    const contractEndDate = tenantInfo ? tenantInfo.contract_end_date : null;
 
     return {
         accessToken: newAccessToken,
         refreshToken: newRefreshToken,
-        user: mapUserForClient(user),
+        user: { ...mapUserForClient(user, features), tenantName, contractEndDate },
     };
 }
 
-// LOGOUT – biz hozircha server tomonda holat saqlamaymiz
 async function logout() {
-    // Agar refresh tokenlarni DB'da yuritishni boshlasak,
-    // shu yerda ularni o'chiramiz. Hozircha bo'sh qoladi.
     return { success: true };
 }
 

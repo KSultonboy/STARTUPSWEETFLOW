@@ -5,7 +5,7 @@ const { run, get, all } = require("../../db/connection");
 /**
  * Bitta transferni id bo'yicha, itemlari bilan qaytarish
  */
-async function findById(id) {
+async function findById(tenantId, id) {
     const transfer = await get(
         `
     SELECT
@@ -24,9 +24,9 @@ async function findById(id) {
     FROM transfers t
     LEFT JOIN branches bfrom ON bfrom.id = t.from_branch_id
     LEFT JOIN branches bto   ON bto.id = t.to_branch_id
-    WHERE t.id = ?
+    WHERE t.id = ? AND t.tenant_id = ?
     `,
-        [id]
+        [id, tenantId]
     );
 
     if (!transfer) return null;
@@ -55,7 +55,7 @@ async function findById(id) {
 /**
  * Barcha transferlar (admin uchun)
  */
-async function findAll() {
+async function findAll(tenantId) {
     const transfers = await all(
         `
     SELECT
@@ -74,6 +74,7 @@ async function findAll() {
     FROM transfers t
     LEFT JOIN branches bfrom ON bfrom.id = t.from_branch_id
     LEFT JOIN branches bto   ON bto.id = t.to_branch_id
+    WHERE t.tenant_id = ?
     ORDER BY t.id DESC
     `
     );
@@ -109,7 +110,7 @@ async function findAll() {
  *  - transfer_items ga yozadi
  *  - markaziy ombordan OUT (warehouse_movements)
  */
-async function createTransfer({ transfer_date, to_branch_id, note, created_by, items }) {
+async function createTransfer(tenantId, { transfer_date, to_branch_id, note, created_by, items }) {
     await run("BEGIN TRANSACTION");
 
     try {
@@ -118,11 +119,11 @@ async function createTransfer({ transfer_date, to_branch_id, note, created_by, i
         const res = await run(
             `
       INSERT INTO transfers
-        (transfer_date, from_branch_id, to_branch_id, status, note, created_by, created_at)
+        (tenant_id, transfer_date, from_branch_id, to_branch_id, status, note, created_by, created_at)
       VALUES
-        (?, ?, ?, 'PENDING', ?, ?, datetime('now'))
+        (?, ?, ?, ?, 'PENDING', ?, ?, datetime('now'))
       `,
-            [transfer_date, fromBranchId, to_branch_id, note || null, created_by || null]
+            [tenantId, transfer_date, fromBranchId, to_branch_id, note || null, created_by || null]
         );
 
         const transferId = res.lastID;
@@ -137,27 +138,27 @@ async function createTransfer({ transfer_date, to_branch_id, note, created_by, i
                 // 1) transfer_items
                 await run(
                     `
-          INSERT INTO transfer_items (transfer_id, product_id, quantity, status)
-          VALUES (?, ?, ?, 'PENDING')
+          INSERT INTO transfer_items (tenant_id, transfer_id, product_id, quantity, status)
+          VALUES (?, ?, ?, ?, 'PENDING')
           `,
-                    [transferId, productId, qty]
+                    [tenantId, transferId, productId, qty]
                 );
 
                 // 2) markaziy ombordan OUT
                 await run(
                     `
           INSERT INTO warehouse_movements
-            (product_id, branch_id, movement_type, source_type, source_id, quantity, created_at)
+            (tenant_id, product_id, branch_id, movement_type, source_type, source_id, quantity, created_at)
           VALUES
-            (?, NULL, 'OUT', 'transfer', ?, ?, datetime('now'))
+            (?, ?, NULL, 'OUT', 'transfer', ?, ?, datetime('now'))
           `,
-                    [productId, transferId, qty]
+                    [tenantId, productId, transferId, qty]
                 );
             }
         }
 
         await run("COMMIT");
-        return findById(transferId);
+        return findById(tenantId, transferId);
     } catch (err) {
         await run("ROLLBACK");
         throw err;

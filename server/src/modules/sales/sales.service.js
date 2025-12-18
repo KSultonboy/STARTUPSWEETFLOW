@@ -40,9 +40,9 @@ function validateSaleInput(data) {
     };
 }
 
-async function createSale(data) {
+async function createSale(tenantId, data) {
     const validData = validateSaleInput(data);
-    const sale = await repo.createSale(validData);
+    const sale = await repo.createSale(tenantId, validData);
     return sale;
 }
 

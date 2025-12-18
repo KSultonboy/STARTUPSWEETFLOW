@@ -6,7 +6,7 @@ const service = require('./expenses.service');
 async function createExpense(req, res) {
     try {
         const currentUser = req.user || null;
-        const exp = await service.createExpense(req.body || {}, currentUser);
+        const exp = await service.createExpense(req.tenantId, req.body || {}, currentUser);
         res.status(201).json(exp);
     } catch (err) {
         console.error('createExpense error:', err);
@@ -26,7 +26,7 @@ async function updateExpense(req, res) {
             return res.status(400).json({ message: 'Noto‘g‘ri ID' });
         }
         const currentUser = req.user || null;
-        const exp = await service.updateExpense(id, req.body || {}, currentUser);
+        const exp = await service.updateExpense(req.tenantId, id, req.body || {}, currentUser);
         res.json(exp);
     } catch (err) {
         console.error('updateExpense error:', err);
@@ -48,7 +48,7 @@ async function deleteExpense(req, res) {
         if (!id) {
             return res.status(400).json({ message: 'Noto‘g‘ri ID' });
         }
-        await service.deleteExpense(id);
+        await service.deleteExpense(req.tenantId, id);
         res.status(204).end();
     } catch (err) {
         console.error('deleteExpense error:', err);
@@ -67,7 +67,7 @@ async function deleteExpense(req, res) {
 async function getExpenses(req, res) {
     try {
         const { type } = req.query;
-        const list = await service.getExpensesByType(type);
+        const list = await service.getExpensesByType(req.tenantId, type);
         res.json(list);
     } catch (err) {
         console.error('getExpenses error:', err);
@@ -86,7 +86,7 @@ async function getExpenseById(req, res) {
         if (!id) {
             return res.status(400).json({ message: 'Noto‘g‘ri ID' });
         }
-        const exp = await service.getExpenseById(id);
+        const exp = await service.getExpenseById(req.tenantId, id);
         res.json(exp);
     } catch (err) {
         console.error('getExpenseById error:', err);

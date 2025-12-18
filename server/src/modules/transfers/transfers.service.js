@@ -44,42 +44,44 @@ function validateCreateInput(data = {}) {
  * Yangi transfer yaratish
  *  - created_by ni user.id bilan to‘ldiramiz
  */
-async function createTransfer(data, user) {
+async function createTransfer(tenantId, data, user) {
     const payload = {
         ...data,
         created_by: user?.id || data?.created_by || null,
     };
 
     const valid = validateCreateInput(payload);
-    return repo.createTransfer(valid);
+    return repo.createTransfer(tenantId, valid);
 }
 
-async function getAllTransfers() {
-    return repo.findAll();
+async function getAllTransfers(tenantId) {
+    return repo.findAll(tenantId);
 }
 
-async function getTransferById(id) {
-    const t = await repo.findById(id);
+async function getTransferById(tenantId, id) {
+    const t = await repo.findById(tenantId, id);
     if (!t) throw new Error("Transfer topilmadi");
     return t;
 }
 
-async function getIncomingForBranch(branchId) {
+async function getIncomingForBranch(tenantId, branchId) {
     const id = Number(branchId);
     if (!id) throw new Error("Branch ID noto'g'ri");
-    return repo.findIncomingForBranch(id);
+    return repo.findIncomingForBranch(tenantId, id);
 }
 
-async function acceptItem(transferId, itemId, branchId) {
+async function acceptItem(tenantId, transferId, itemId, branchId) {
     return repo.acceptItem({
+        tenantId,
         transferId: Number(transferId),
         itemId: Number(itemId),
         branchId: Number(branchId),
     });
 }
 
-async function rejectItem(transferId, itemId, branchId) {
+async function rejectItem(tenantId, transferId, itemId, branchId) {
     return repo.rejectItem({
+        tenantId,
         transferId: Number(transferId),
         itemId: Number(itemId),
         branchId: Number(branchId),
@@ -89,7 +91,7 @@ async function rejectItem(transferId, itemId, branchId) {
 /**
  * Transferni tahrirlash (faqat PENDING / barcha bandlari PENDING)
  */
-async function updateTransfer(id, data, user) {
+async function updateTransfer(tenantId, id, data, user) {
     const payload = {
         ...data,
         created_by: user?.id || data?.created_by || null,
@@ -97,6 +99,7 @@ async function updateTransfer(id, data, user) {
 
     const valid = validateCreateInput(payload);
     return repo.updateTransfer({
+        tenantId,
         id: Number(id),
         ...valid,
     });
@@ -105,8 +108,8 @@ async function updateTransfer(id, data, user) {
 /**
  * Transferni bekor qilish / "o‘chirish"
  */
-async function cancelTransfer(id) {
-    await repo.cancelTransfer(Number(id));
+async function cancelTransfer(tenantId, id) {
+    await repo.cancelTransfer(tenantId, Number(id));
 }
 
 module.exports = {

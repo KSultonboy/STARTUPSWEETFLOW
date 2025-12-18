@@ -3,7 +3,7 @@ const { run, get } = require('../../db/connection');
 /**
  * Berilgan product + branch uchun hozirgi qoldiqni qaytaradi
  */
-async function getCurrentStock(productId, branchId) {
+async function getCurrentStock(tenantId, productId, branchId) {
     const row = await get(
         `
     SELECT 
@@ -17,9 +17,9 @@ async function getCurrentStock(productId, branchId) {
         0
       ) AS quantity
     FROM warehouse_movements
-    WHERE product_id = ? AND branch_id = ?
+    WHERE product_id = ? AND branch_id = ? AND tenant_id = ?
     `,
-        [productId, branchId]
+        [productId, branchId, tenantId]
     );
 
     return row ? row.quantity : 0;
@@ -32,14 +32,14 @@ async function getCurrentStock(productId, branchId) {
  *  - sale_items jadvaliga yozadi
  *  - warehouse_movements ga OUT yozadi
  */
-async function createSale({ branch_id, user_id, sale_date, items, allow_negative_stock }) {
+async function createSale(tenantId, { branch_id, user_id, sale_date, items, allow_negative_stock }) {
     // 0) Qoldiqni tekshirish (faqat allow_negative_stock == false bo'lsa)
     if (!allow_negative_stock) {
         const shortages = [];
 
         for (const item of items) {
             const { product_id, quantity } = item;
-            const currentStock = await getCurrentStock(product_id, branch_id);
+            const currentStock = await getCurrentStock(tenantId, product_id, branch_id);
 
             if (currentStock < quantity) {
                 shortages.push({
@@ -65,10 +65,10 @@ async function createSale({ branch_id, user_id, sale_date, items, allow_negative
         // 1) Avval sales jadvaliga yozamiz (total_amount hozircha 0)
         const insertSale = await run(
             `
-      INSERT INTO sales (branch_id, user_id, sale_date, total_amount, created_at)
-      VALUES (?, ?, ?, 0, datetime('now'))
+      INSERT INTO sales (tenant_id, branch_id, user_id, sale_date, total_amount, created_at)
+      VALUES (?, ?, ?, ?, 0, datetime('now'))
       `,
-            [branch_id, user_id || null, sale_date]
+            [tenantId, branch_id, user_id || null, sale_date]
         );
 
         const saleId = insertSale.lastID;
@@ -83,10 +83,10 @@ async function createSale({ branch_id, user_id, sale_date, items, allow_negative
             // sale_items
             await run(
                 `
-        INSERT INTO sale_items (sale_id, product_id, quantity, unit_price, total_price)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO sale_items (tenant_id, sale_id, product_id, quantity, unit_price, total_price)
+        VALUES (?, ?, ?, ?, ?, ?)
         `,
-                [saleId, product_id, quantity, unit_price, total_price]
+                [tenantId, saleId, product_id, quantity, unit_price, total_price]
             );
 
             totalAmount += total_price;
@@ -95,11 +95,11 @@ async function createSale({ branch_id, user_id, sale_date, items, allow_negative
             await run(
                 `
         INSERT INTO warehouse_movements
-          (product_id, branch_id, movement_type, source_type, source_id, quantity, created_at)
+          (tenant_id, product_id, branch_id, movement_type, source_type, source_id, quantity, created_at)
         VALUES
-          (?, ?, 'OUT', 'sale', ?, ?, datetime('now'))
+          (?, ?, ?, 'OUT', 'sale', ?, ?, datetime('now'))
         `,
-                [product_id, branch_id, saleId, quantity]
+                [tenantId, product_id, branch_id, saleId, quantity]
             );
         }
 
@@ -108,9 +108,9 @@ async function createSale({ branch_id, user_id, sale_date, items, allow_negative
             `
       UPDATE sales
       SET total_amount = ?
-      WHERE id = ?
+      WHERE id = ? AND tenant_id = ?
       `,
-            [totalAmount, saleId]
+            [totalAmount, saleId, tenantId]
         );
 
         // 4) Yakun: COMMIT
@@ -120,9 +120,9 @@ async function createSale({ branch_id, user_id, sale_date, items, allow_negative
             `
       SELECT id, branch_id, user_id, sale_date, total_amount, created_at
       FROM sales
-      WHERE id = ?
+      WHERE id = ? AND tenant_id = ?
       `,
-            [saleId]
+            [saleId, tenantId]
         );
 
         return {

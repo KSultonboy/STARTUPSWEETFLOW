@@ -3,6 +3,7 @@ const service = require('./history.service');
 
 async function getActivities(req, res) {
     try {
+        const tenantId = req.tenantId;
         const user = req.user || {};
         const role = user.role || null;
 
@@ -24,7 +25,7 @@ async function getActivities(req, res) {
         }
         // admin → hech narsa o‘zgarmaydi
 
-        const activities = await service.getActivities({
+        const activities = await service.getActivities(tenantId, {
             limit,
             offset,
             type,

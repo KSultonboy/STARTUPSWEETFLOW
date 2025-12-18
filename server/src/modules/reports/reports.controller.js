@@ -3,6 +3,8 @@ const service = require('./reports.service');
 
 async function getOverview(req, res) {
     try {
+        const tenantId = req.tenantId;
+
         let { date, mode } = req.query;
 
         // Sana berilmasa – bugungi sana
@@ -16,7 +18,7 @@ async function getOverview(req, res) {
             mode = 'day'; // day | week | month | year
         }
 
-        const data = await service.getOverview(date, mode);
+        const data = await service.getOverview(tenantId, date, mode);
         res.json({ date, mode, ...data });
     } catch (err) {
         console.error('getOverview error:', err);

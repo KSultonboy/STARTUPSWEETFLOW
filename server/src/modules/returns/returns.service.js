@@ -29,7 +29,7 @@ function validateReturnInput(payload) {
  *  - filial (branch) user: faqat o'z filialidan
  *  - admin: hozircha qaytish yaratmaydi, faqat ko'radi/tasdiqlaydi
  */
-async function createReturn(payload, user) {
+async function createReturn(tenantId, payload, user) {
     if (!user) {
         throw new Error('Foydalanuvchi aniqlanmadi.');
     }
@@ -53,6 +53,7 @@ async function createReturn(payload, user) {
     }
 
     const created = await repo.createReturn({
+        tenantId,
         branchId,
         date: payload.date,
         comment: payload.comment,
@@ -68,7 +69,7 @@ async function createReturn(payload, user) {
  *  - admin: hammasi (filter bilan)
  *  - branch: faqat o'z filialidagilar
  */
-async function listReturns(filters, user) {
+async function listReturns(tenantId, filters, user) {
     const limit = filters.limit || 50;
     const offset = filters.offset || 0;
 
@@ -87,6 +88,7 @@ async function listReturns(filters, user) {
     }
 
     const rows = await repo.listReturns({
+        tenantId,
         branchId,
         status,
         dateFrom: filters.date_from || null,
@@ -101,8 +103,8 @@ async function listReturns(filters, user) {
 /**
  * Bitta qaytishni olish
  */
-async function getReturnById(id, user) {
-    const data = await repo.getReturnById(id);
+async function getReturnById(tenantId, id, user) {
+    const data = await repo.getReturnById(tenantId, id);
     if (!data) return null;
 
     // Branch user – faqat o'z filialidagi qaytishni ko'radi
@@ -164,7 +166,7 @@ async function updateReturn(id, payload, user) {
 
     validateReturnInput(payload);
 
-    const existing = await repo.getReturnById(id);
+    const existing = await repo.getReturnById(user.tenantId, id);
     if (!existing) {
         throw new Error('Qaytish topilmadi.');
     }
@@ -214,7 +216,7 @@ async function deleteReturn(id, user) {
         throw new Error('Sizda qaytishni o‘chirish huquqi yo‘q.');
     }
 
-    const existing = await repo.getReturnById(id);
+    const existing = await repo.getReturnById(user.tenantId, id);
     if (!existing) {
         throw new Error('Qaytish topilmadi.');
     }

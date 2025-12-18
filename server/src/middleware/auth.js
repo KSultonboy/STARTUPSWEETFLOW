@@ -16,6 +16,7 @@ function requireAuth(req, res, next) {
         req.user = {
             id: payload.id,
             role: payload.role,
+            tenantId: payload.tenantId, // Tenant ID
             branchId: payload.branchId || null,
         };
         next();

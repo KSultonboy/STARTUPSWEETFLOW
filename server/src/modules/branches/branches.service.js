@@ -32,15 +32,15 @@ function validateBranchInput(data) {
 /**
  * Barcha joylar
  */
-async function getBranches() {
-    const branches = await repo.getAllBranches();
+async function getBranches(tenantId) {
+    const branches = await repo.getAllBranches(tenantId);
     return branches;
 }
 
 /**
  * Yangi joy yaratish
  */
-async function createBranch(data) {
+async function createBranch(tenantId, data) {
     validateBranchInput(data);
 
     const branchType = (data.branch_type || 'BRANCH').toUpperCase();
@@ -60,14 +60,14 @@ async function createBranch(data) {
         branch_type: branchType,
     };
 
-    const created = await repo.createBranch(payload);
+    const created = await repo.createBranch(tenantId, payload);
     return created;
 }
 
 /**
  * Joyni yangilash
  */
-async function updateBranch(id, data) {
+async function updateBranch(tenantId, id, data) {
     validateBranchInput({
         ...data,
         name: data.name ?? '',
@@ -93,15 +93,15 @@ async function updateBranch(id, data) {
         branch_type: branchType,
     };
 
-    const updated = await repo.updateBranch(id, payload);
+    const updated = await repo.updateBranch(tenantId, id, payload);
     return updated;
 }
 
 /**
  * Joyni o'chirish (soft delete)
  */
-async function deleteBranch(id) {
-    const result = await repo.deleteBranch(id);
+async function deleteBranch(tenantId, id) {
+    const result = await repo.deleteBranch(tenantId, id);
     return result;
 }
 

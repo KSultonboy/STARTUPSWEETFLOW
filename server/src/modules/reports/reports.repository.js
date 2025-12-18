@@ -31,16 +31,21 @@ function buildPeriodCondition(columnExpr, mode, date) {
   };
 }
 
-async function getOverview(date, mode = "day") {
+async function getOverview(tenantId, date, mode = "day") {
+  if (!tenantId) {
+    throw new Error("tenantId is required for reports");
+  }
+
   // 1) Filiallar (oddiy branchlar)
   const branchesRow = await get(
     `
       SELECT COUNT(*) AS total
       FROM branches
-      WHERE is_active = 1
+      WHERE tenant_id = ?
+        AND is_active = 1
         AND (UPPER(branch_type) = 'BRANCH' OR branch_type IS NULL)
     `,
-    []
+    [tenantId]
   );
 
   // 2) Ulgurji do'konlar (OUTLET)
@@ -48,17 +53,24 @@ async function getOverview(date, mode = "day") {
     `
       SELECT COUNT(*) AS total
       FROM branches
-      WHERE is_active = 1
+      WHERE tenant_id = ?
+        AND is_active = 1
         AND UPPER(branch_type) = 'OUTLET'
     `,
-    []
+    [tenantId]
   );
 
   // 3) Foydalanuvchilar
-  const usersRow = await get(`SELECT COUNT(*) AS total FROM users WHERE is_active = 1`, []);
+  const usersRow = await get(
+    `SELECT COUNT(*) AS total FROM users WHERE tenant_id = ? AND is_active = 1`,
+    [tenantId]
+  );
 
   // 4) Mahsulotlar
-  const productsRow = await get(`SELECT COUNT(*) AS total FROM products`, []);
+  const productsRow = await get(
+    `SELECT COUNT(*) AS total FROM products WHERE tenant_id = ?`,
+    [tenantId]
+  );
 
   // === Period bo‘yicha savdo ===
   const salesDateCond = buildPeriodCondition("sale_date", mode, date);
@@ -70,9 +82,10 @@ async function getOverview(date, mode = "day") {
         IFNULL(SUM(total_amount), 0) AS total_amount,
         COUNT(*) AS sale_count
       FROM sales
-      WHERE ${salesDateCond.clause}
+      WHERE tenant_id = ?
+        AND ${salesDateCond.clause}
     `,
-    salesDateCond.params
+    [tenantId, ...salesDateCond.params]
   );
   const todaySalesAmount = salesRow?.total_amount || 0;
   const todaySalesCount = salesRow?.sale_count || 0;
@@ -90,15 +103,16 @@ async function getOverview(date, mode = "day") {
       JOIN sales    s ON s.id = si.sale_id
       JOIN products p ON p.id = si.product_id
       LEFT JOIN branches b ON b.id = s.branch_id
-      WHERE ${salesDateCond.clause}
-      GROUP BY p.id, p.name, b.name
+      WHERE s.tenant_id = ?
+        AND ${salesDateCond.clause}
+      GROUP BY p.id, p.name, branch_name
       ORDER BY sold_quantity DESC
       LIMIT 10
     `,
-    salesDateCond.params
+    [tenantId, ...salesDateCond.params]
   );
 
-  // 7) Oylik grafika: doim tanlangan sananing OYI bo‘yicha
+  // 7) Oylik grafika – tanlangan sananing OYI bo‘yicha
   const monthlyCond = buildPeriodCondition("sale_date", "month", date);
   const monthlySales = await all(
     `
@@ -107,11 +121,12 @@ async function getOverview(date, mode = "day") {
         IFNULL(SUM(total_amount), 0) AS total_amount,
         COUNT(*) AS sale_count
       FROM sales
-      WHERE ${monthlyCond.clause}
+      WHERE tenant_id = ?
+        AND ${monthlyCond.clause}
       GROUP BY sale_date
       ORDER BY sale_date ASC
     `,
-    monthlyCond.params
+    [tenantId, ...monthlyCond.params]
   );
 
   // === Period bo‘yicha xarajatlar ===
@@ -124,9 +139,11 @@ async function getOverview(date, mode = "day") {
         IFNULL(SUM(ei.total_price), 0) AS total_amount
       FROM expenses e
       JOIN expense_items ei ON ei.expense_id = e.id
-      WHERE ${expenseDateCond.clause}
+      WHERE e.tenant_id = ?
+        AND ei.tenant_id = ?
+        AND ${expenseDateCond.clause}
     `,
-    expenseDateCond.params
+    [tenantId, tenantId, ...expenseDateCond.params]
   );
   const totalExpenses = expenseTotalRow?.total_amount || 0;
 
@@ -138,10 +155,12 @@ async function getOverview(date, mode = "day") {
         IFNULL(SUM(ei.total_price), 0) AS total_amount
       FROM expenses e
       JOIN expense_items ei ON ei.expense_id = e.id
-      WHERE ${expenseDateCond.clause}
+      WHERE e.tenant_id = ?
+        AND ei.tenant_id = ?
+        AND ${expenseDateCond.clause}
       GROUP BY e.type
     `,
-    expenseDateCond.params
+    [tenantId, tenantId, ...expenseDateCond.params]
   );
 
   // === Period bo‘yicha ishlab chiqarish ===
@@ -155,9 +174,10 @@ async function getOverview(date, mode = "day") {
         IFNULL(SUM(pi.quantity), 0) AS total_quantity
       FROM production_batches pb
       LEFT JOIN production_items pi ON pi.batch_id = pb.id
-      WHERE ${prodDateCond.clause}
+      WHERE pb.tenant_id = ?
+        AND ${prodDateCond.clause}
     `,
-    prodDateCond.params
+    [tenantId, ...prodDateCond.params]
   );
 
   const productionBatchCount = productionRow?.batch_count || 0;
@@ -174,11 +194,12 @@ async function getOverview(date, mode = "day") {
       FROM production_batches pb
       JOIN production_items pi ON pi.batch_id = pb.id
       JOIN products p          ON p.id        = pi.product_id
-      WHERE ${prodDateCond.clause}
+      WHERE pb.tenant_id = ?
+        AND ${prodDateCond.clause}
       GROUP BY p.id, p.name, p.unit
       ORDER BY total_quantity DESC
     `,
-    prodDateCond.params
+    [tenantId, ...prodDateCond.params]
   );
 
   // === Period bo‘yicha filial/do‘kon savdosi (salesByBranch) ===
@@ -192,11 +213,12 @@ async function getOverview(date, mode = "day") {
         COUNT(s.id) AS sale_count
       FROM sales s
       LEFT JOIN branches b ON b.id = s.branch_id
-      WHERE ${salesDateCond.clause}
+      WHERE s.tenant_id = ?
+        AND ${salesDateCond.clause}
       GROUP BY b.id, b.name, branch_type
       ORDER BY total_amount DESC
     `,
-    salesDateCond.params
+    [tenantId, ...salesDateCond.params]
   );
 
   // === Period bo‘yicha OUTLETlarga transferlar ===
@@ -217,11 +239,12 @@ async function getOverview(date, mode = "day") {
       JOIN transfers t ON t.id = ti.transfer_id
       JOIN branches b ON b.id = t.to_branch_id
       JOIN products p ON p.id = ti.product_id
-      WHERE ${transferDateCond.clause}
+      WHERE t.tenant_id = ?
+        AND ${transferDateCond.clause}
         AND UPPER(IFNULL(b.branch_type, 'BRANCH')) = 'OUTLET'
         AND ti.status = 'ACCEPTED'
     `,
-    transferDateCond.params
+    [tenantId, ...transferDateCond.params]
   );
 
   const outletTransfersAmountPeriod = outletTransfersRow?.total_amount || 0;
@@ -244,13 +267,14 @@ async function getOverview(date, mode = "day") {
       JOIN transfers t ON t.id = ti.transfer_id
       JOIN branches b ON b.id = t.to_branch_id
       JOIN products p ON p.id = ti.product_id
-      WHERE ${transferDateCond.clause}
+      WHERE t.tenant_id = ?
+        AND ${transferDateCond.clause}
         AND UPPER(IFNULL(b.branch_type, 'BRANCH')) = 'OUTLET'
         AND ti.status = 'ACCEPTED'
       GROUP BY b.id, b.name, branch_type
       ORDER BY total_amount DESC
     `,
-    transferDateCond.params
+    [tenantId, ...transferDateCond.params]
   );
 
   // === Period bo‘yicha vazvratlar ===
@@ -269,10 +293,11 @@ async function getOverview(date, mode = "day") {
         ), 0) AS total_amount
       FROM warehouse_movements wm
       JOIN products p ON p.id = wm.product_id
-      WHERE wm.source_type = 'return'
+      WHERE wm.tenant_id = ?
+        AND wm.source_type = 'return'
         AND ${returnsDateCond.clause}
     `,
-    returnsDateCond.params
+    [tenantId, ...returnsDateCond.params]
   );
 
   const returnsAmountPeriod = returnsPeriodRow?.total_amount || 0;
@@ -294,12 +319,13 @@ async function getOverview(date, mode = "day") {
         ), 0) AS total_amount
       FROM warehouse_movements wm
       JOIN products p ON p.id = wm.product_id
-      WHERE wm.source_type = 'return'
+      WHERE wm.tenant_id = ?
+        AND wm.source_type = 'return'
         AND ${returnsDateCond.clause}
       GROUP BY p.id, p.name, p.unit
       ORDER BY total_amount DESC
     `,
-    returnsDateCond.params
+    [tenantId, ...returnsDateCond.params]
   );
 
   const returnsByBranchToday = await all(
@@ -319,23 +345,25 @@ async function getOverview(date, mode = "day") {
       FROM warehouse_movements wm
       JOIN products p ON p.id = wm.product_id
       LEFT JOIN branches b ON b.id = wm.branch_id
-      WHERE wm.source_type = 'return'
+      WHERE wm.tenant_id = ?
+        AND wm.source_type = 'return'
         AND ${returnsDateCond.clause}
       GROUP BY b.id, b.name, branch_type
     `,
-    returnsDateCond.params
+    [tenantId, ...returnsDateCond.params]
   );
 
-  // === ✅ KASSA (period) ===
+  // === KASSA (period) ===
   const cashDateCond = buildPeriodCondition("c.cash_date", mode, date);
 
   const cashPeriodRow = await get(
     `
       SELECT IFNULL(SUM(c.amount), 0) AS total_amount
       FROM cash_entries c
-      WHERE ${cashDateCond.clause}
+      WHERE c.tenant_id = ?
+        AND ${cashDateCond.clause}
     `,
-    cashDateCond.params
+    [tenantId, ...cashDateCond.params]
   );
   const cashReceivedPeriod = cashPeriodRow?.total_amount || 0;
 
@@ -348,17 +376,18 @@ async function getOverview(date, mode = "day") {
         IFNULL(SUM(c.amount), 0) AS total_amount
       FROM cash_entries c
       LEFT JOIN branches b ON b.id = c.branch_id
-      WHERE ${cashDateCond.clause}
+      WHERE c.tenant_id = ?
+        AND ${cashDateCond.clause}
       GROUP BY b.id, b.name, branch_type
       ORDER BY total_amount DESC
     `,
-    cashDateCond.params
+    [tenantId, ...cashDateCond.params]
   );
 
-  // === Qarzlar – ALL TIME (endilikda: (Sales + OutletTransfers) - Returns - Cash) ===
+  // === Qarzlar – ALL TIME (faqat shu tenant)
   const salesAllRow = await get(
-    `SELECT IFNULL(SUM(total_amount), 0) AS total_amount FROM sales`,
-    []
+    `SELECT IFNULL(SUM(total_amount), 0) AS total_amount FROM sales WHERE tenant_id = ?`,
+    [tenantId]
   );
   const salesAllAmount = salesAllRow?.total_amount || 0;
 
@@ -377,10 +406,11 @@ async function getOverview(date, mode = "day") {
       JOIN transfers t ON t.id = ti.transfer_id
       JOIN branches b ON b.id = t.to_branch_id
       JOIN products p ON p.id = ti.product_id
-      WHERE UPPER(IFNULL(b.branch_type, 'BRANCH')) = 'OUTLET'
+      WHERE t.tenant_id = ?
+        AND UPPER(IFNULL(b.branch_type, 'BRANCH')) = 'OUTLET'
         AND ti.status = 'ACCEPTED'
     `,
-    []
+    [tenantId]
   );
   const outletTransfersAllAmount = outletTransfersAllRow?.total_amount || 0;
 
@@ -397,27 +427,25 @@ async function getOverview(date, mode = "day") {
         ), 0) AS total_amount
       FROM warehouse_movements wm
       JOIN products p ON p.id = wm.product_id
-      WHERE wm.source_type = 'return'
+      WHERE wm.tenant_id = ?
+        AND wm.source_type = 'return'
     `,
-    []
+    [tenantId]
   );
   const returnsAllAmount = returnsAllRow?.total_amount || 0;
 
   const cashAllRow = await get(
-    `SELECT IFNULL(SUM(amount), 0) AS total_amount FROM cash_entries`,
-    []
+    `SELECT IFNULL(SUM(amount), 0) AS total_amount FROM cash_entries WHERE tenant_id = ?`,
+    [tenantId]
   );
   const cashReceivedAllTime = cashAllRow?.total_amount || 0;
 
   const debtsAmount =
-    (salesAllAmount + outletTransfersAllAmount) - returnsAllAmount - cashReceivedAllTime;
+    salesAllAmount + outletTransfersAllAmount - returnsAllAmount - cashReceivedAllTime;
 
   // === Yakuniy ko‘rsatkichlar ===
   const totalRevenue = todaySalesAmount + outletTransfersAmountPeriod;
-
-  // ✅ endi real kassa
   const cashReceivedToday = cashReceivedPeriod;
-
   const profit = totalRevenue - totalExpenses - returnsAmountPeriod;
 
   return {
@@ -448,8 +476,6 @@ async function getOverview(date, mode = "day") {
     returnsByProduct,
     outletTransfersByBranch,
     returnsByBranchToday,
-
-    // ✅ qo‘shildi
     cashByBranchPeriod,
   };
 }
@@ -457,3 +483,4 @@ async function getOverview(date, mode = "day") {
 module.exports = {
   getOverview,
 };
+

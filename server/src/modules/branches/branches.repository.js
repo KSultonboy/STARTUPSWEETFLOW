@@ -5,7 +5,7 @@ const { all, get, run } = require('../../db/connection');
 /**
  * Barcha filial/do‘konlarni olish.
  */
-async function getAllBranches() {
+async function getAllBranches(tenantId) {
   const rows = await all(
     `
       SELECT
@@ -15,9 +15,10 @@ async function getAllBranches() {
         IFNULL(use_central_stock, 0) AS use_central_stock,
         branch_type
       FROM branches
+      WHERE tenant_id = ?
       ORDER BY id ASC
     `,
-    []
+    [tenantId]
   );
 
   return rows;
@@ -26,7 +27,7 @@ async function getAllBranches() {
 /**
  * Bitta joyni id bo'yicha olish
  */
-async function getBranchById(id) {
+async function getBranchById(tenantId, id) {
   const row = await get(
     `
       SELECT
@@ -36,9 +37,9 @@ async function getBranchById(id) {
         IFNULL(use_central_stock, 0) AS use_central_stock,
         branch_type
       FROM branches
-      WHERE id = ?
+      WHERE id = ? AND tenant_id = ?
     `,
-    [id]
+    [id, tenantId]
   );
 
   return row || null;
@@ -47,7 +48,7 @@ async function getBranchById(id) {
 /**
  * Yangi joy (filial/do‘kon) yaratish
  */
-async function createBranch(data) {
+async function createBranch(tenantId, data) {
   const name = (data.name || '').trim();
   const isActive =
     typeof data.is_active === 'number' ? data.is_active : 1;
@@ -59,21 +60,21 @@ async function createBranch(data) {
 
   const result = await run(
     `
-      INSERT INTO branches (name, is_active, use_central_stock, branch_type)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO branches (tenant_id, name, is_active, use_central_stock, branch_type)
+      VALUES (?, ?, ?, ?, ?)
     `,
-    [name, isActive, useCentral, branchType]
+    [tenantId, name, isActive, useCentral, branchType]
   );
 
-  const created = await getBranchById(result.lastID);
+  const created = await getBranchById(tenantId, result.lastID);
   return created;
 }
 
 /**
  * Joyni yangilash
  */
-async function updateBranch(id, data) {
-  const existing = await getBranchById(id);
+async function updateBranch(tenantId, id, data) {
+  const existing = await getBranchById(tenantId, id);
   if (!existing) {
     throw new Error('Filial/do‘kon topilmadi.');
   }
@@ -101,20 +102,20 @@ async function updateBranch(id, data) {
         is_active = ?,
         use_central_stock = ?,
         branch_type = ?
-      WHERE id = ?
+      WHERE id = ? AND tenant_id = ?
     `,
-    [name, isActive, useCentral, branchType, id]
+    [name, isActive, useCentral, branchType, id, tenantId]
   );
 
-  const updated = await getBranchById(id);
+  const updated = await getBranchById(tenantId, id);
   return updated;
 }
 
 /**
  * Soft delete
  */
-async function deleteBranch(id) {
-  const existing = await getBranchById(id);
+async function deleteBranch(tenantId, id) {
+  const existing = await getBranchById(tenantId, id);
   if (!existing) {
     throw new Error('Filial/do‘kon topilmadi.');
   }
@@ -123,12 +124,12 @@ async function deleteBranch(id) {
     `
       UPDATE branches
       SET is_active = 0
-      WHERE id = ?
+      WHERE id = ? AND tenant_id = ?
     `,
-    [id]
+    [id, tenantId]
   );
 
-  const updated = await getBranchById(id);
+  const updated = await getBranchById(tenantId, id);
   return updated;
 }
 

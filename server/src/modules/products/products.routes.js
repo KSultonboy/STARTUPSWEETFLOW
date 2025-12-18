@@ -8,8 +8,11 @@ router.get('/', controller.getAllProducts);
 // GET /api/products/decorations – bezak mahsulotlar
 router.get('/decorations', controller.getDecorationProducts);
 
-// ✅ YANGI: kommunal (UTILITY) mahsulotlar
+// Kommunal (UTILITY) mahsulotlar
 router.get('/utilities', controller.getUtilityProducts);
+
+// GET /api/products/by-barcode/:code – barcode bo‘yicha mahsulot topish
+router.get('/by-barcode/:code', controller.getByBarcode);
 
 // POST /api/products
 router.post('/', controller.createProduct);
@@ -21,3 +24,4 @@ router.put('/:id', controller.updateProduct);
 router.delete('/:id', controller.deleteProduct);
 
 module.exports = router;
+

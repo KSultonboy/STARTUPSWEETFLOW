@@ -1,8 +1,8 @@
 // server/src/modules/cash/cash.service.js
 const repo = require("./cash.repository");
 
-async function list(params) {
-    return repo.list(params);
+async function list(tenantId, params) {
+    return repo.list({ tenantId, ...params });
 }
 
 /**
@@ -11,13 +11,14 @@ async function list(params) {
  *  - sales: sotuvdan tushgan pul (auto IN)
  *  - cash_entries: admin OUT => minus, manual IN => plus
  */
-async function summary(params) {
-    return repo.summary(params);
+async function summary(tenantId, params) {
+    return repo.summary({ tenantId, ...params });
 }
 
-async function cashOut({ branch_id, amount, cash_date, note, created_by }) {
+async function cashOut(tenantId, { branch_id, amount, cash_date, note, created_by }) {
     // minus yozamiz
     return repo.createEntry({
+        tenant_id: tenantId,
         cash_date,
         branch_id,
         amount: -Math.abs(amount),
@@ -26,8 +27,9 @@ async function cashOut({ branch_id, amount, cash_date, note, created_by }) {
     });
 }
 
-async function cashIn({ branch_id, amount, cash_date, note, created_by }) {
+async function cashIn(tenantId, { branch_id, amount, cash_date, note, created_by }) {
     return repo.createEntry({
+        tenant_id: tenantId,
         cash_date,
         branch_id,
         amount: Math.abs(amount),
@@ -36,8 +38,8 @@ async function cashIn({ branch_id, amount, cash_date, note, created_by }) {
     });
 }
 
-async function remove(id) {
-    return repo.remove(id);
+async function remove(tenantId, id) {
+    return repo.remove(tenantId, id);
 }
 
 module.exports = {

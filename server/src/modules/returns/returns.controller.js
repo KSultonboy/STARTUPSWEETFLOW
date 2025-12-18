@@ -5,7 +5,7 @@ async function createReturn(req, res) {
         const user = req.user || null;
         const payload = req.body || {};
 
-        const created = await service.createReturn(payload, user);
+        const created = await service.createReturn(req.tenantId, payload, user);
         res.status(201).json(created);
     } catch (err) {
         console.error('createReturn error:', err);
@@ -28,7 +28,7 @@ async function listReturns(req, res) {
             offset: parseInt(req.query.offset, 10) || 0,
         };
 
-        const rows = await service.listReturns(filters, user);
+        const rows = await service.listReturns(req.tenantId, filters, user);
         res.json(rows);
     } catch (err) {
         console.error('listReturns error:', err);
@@ -43,7 +43,7 @@ async function getReturnById(req, res) {
         const user = req.user || null;
         const { id } = req.params;
 
-        const data = await service.getReturnById(id, user);
+        const data = await service.getReturnById(req.tenantId, id, user);
         if (!data) {
             return res.status(404).json({ message: 'Qaytish topilmadi' });
         }

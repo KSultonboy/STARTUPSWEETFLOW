@@ -25,28 +25,28 @@ function buildPeriodCondition(columnExpr, mode, date) {
     return { clause: `${columnExpr} = ?`, params: [date] };
 }
 
-async function createEntry({ cash_date, branch_id, amount, note, created_by }) {
+async function createEntry({ tenant_id, cash_date, branch_id, amount, note, created_by }) {
     const r = await run(
         `
-      INSERT INTO cash_entries (cash_date, branch_id, amount, note, created_by)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO cash_entries (tenant_id, cash_date, branch_id, amount, note, created_by)
+      VALUES (?, ?, ?, ?, ?, ?)
     `,
-        [cash_date, branch_id, amount, note || null, created_by || null]
+        [tenant_id, cash_date, branch_id, amount, note || null, created_by || null]
     );
 
-    const row = await get(`SELECT * FROM cash_entries WHERE id = ?`, [r.lastID]);
+    const row = await get(`SELECT * FROM cash_entries WHERE id = ? AND tenant_id = ?`, [r.lastID, tenant_id]);
     return row;
 }
 
-async function remove(id) {
-    return run(`DELETE FROM cash_entries WHERE id = ?`, [id]);
+async function remove(tenantId, id) {
+    return run(`DELETE FROM cash_entries WHERE id = ? AND tenant_id = ?`, [id, tenantId]);
 }
 
-async function list({ date, mode, branchType, branchId, limit = 200, offset = 0 }) {
+async function list({ tenantId, date, mode, branchType, branchId, limit = 200, offset = 0 }) {
     const cond = buildPeriodCondition("ce.cash_date", mode, date);
 
-    const params = [...cond.params];
-    let where = `WHERE ${cond.clause}`;
+    const params = [tenantId, ...cond.params];
+    let where = `WHERE ce.tenant_id = ? AND ${cond.clause}`;
 
     if (branchType) {
         where += ` AND UPPER(IFNULL(b.branch_type,'BRANCH')) = ?`;
@@ -80,13 +80,13 @@ async function list({ date, mode, branchType, branchId, limit = 200, offset = 0 
     return rows;
 }
 
-async function summary({ date, mode, branchType, branchId }) {
+async function summary({ tenantId, date, mode, branchType, branchId }) {
     const salesCond = buildPeriodCondition("s.sale_date", mode, date);
     const cashCond = buildPeriodCondition("ce.cash_date", mode, date);
 
     // per-branch summary
-    const params = [...salesCond.params, ...cashCond.params];
-    let branchWhere = `WHERE b.is_active = 1`;
+    const params = [tenantId, ...salesCond.params, tenantId, ...cashCond.params];
+    let branchWhere = `WHERE b.tenant_id = ? AND b.is_active = 1`;
 
     if (branchType) {
         branchWhere += ` AND UPPER(IFNULL(b.branch_type,'BRANCH')) = ?`;
@@ -103,12 +103,14 @@ async function summary({ date, mode, branchType, branchId }) {
       period_sales AS (
         SELECT branch_id, IFNULL(SUM(total_amount),0) AS sales_amount_period
         FROM sales s
-        WHERE ${salesCond.clause}
+        WHERE s.tenant_id = ?
+          AND ${salesCond.clause}
         GROUP BY branch_id
       ),
       all_sales AS (
         SELECT branch_id, IFNULL(SUM(total_amount),0) AS sales_amount_all
         FROM sales
+        WHERE tenant_id = ?
         GROUP BY branch_id
       ),
       period_cash AS (
@@ -117,7 +119,8 @@ async function summary({ date, mode, branchType, branchId }) {
           IFNULL(SUM(CASE WHEN amount < 0 THEN -amount ELSE 0 END),0) AS cash_out_period,
           IFNULL(SUM(amount),0) AS cash_net_period
         FROM cash_entries ce
-        WHERE ${cashCond.clause}
+        WHERE ce.tenant_id = ?
+          AND ${cashCond.clause}
         GROUP BY branch_id
       ),
       all_cash AS (

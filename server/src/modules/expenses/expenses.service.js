@@ -2,8 +2,6 @@ const repo = require('./expenses.repository');
 
 /**
  * items massivini tozalab, faqat haqiqiy bandlarni qaytaradi.
- *  - product_id yoki name bo'lishi kerak
- *  - quantity > 0 bo'lishi kerak
  */
 function normalizeItems(rawItems) {
     const items = Array.isArray(rawItems) ? rawItems : [];
@@ -69,7 +67,7 @@ function validateExpenseInput(body) {
     };
 }
 
-async function createExpense(body, currentUser) {
+async function createExpense(tenantId, body, currentUser) {
     const validated = validateExpenseInput(body);
 
     const payload = {
@@ -80,17 +78,14 @@ async function createExpense(body, currentUser) {
         created_by: currentUser?.id || null,
     };
 
-    const expenseId = await repo.insertExpense(payload);
+    const expenseId = await repo.insertExpense(tenantId, payload);
 
     // Expense bandlarini yozamiz
     for (const item of validated.items) {
-        await repo.insertExpenseItem(expenseId, item);
+        await repo.insertExpenseItem(tenantId, expenseId, item);
     }
 
     // 🟢 DEKOR xarajatlari omborga kirim bo'lishi kerak
-    // Hozircha hammasini Markaziy omborga (branch_id = NULL) yozamiz.
-    // Agar keyinchalik xarajat qaysi filialga tegishli bo'lishini istasak,
-    // body.branch_id yoki currentUser.branch_id ni ishlatishga o‘tamiz.
     if (validated.type === 'decor') {
         const branchId = body.branch_id || null; // hozircha yo'q bo'lsa, markaziy
 
@@ -98,7 +93,7 @@ async function createExpense(body, currentUser) {
             if (!item.product_id) continue;
             if (!item.quantity || item.quantity <= 0) continue;
 
-            await repo.insertWarehouseMovement({
+            await repo.insertWarehouseMovement(tenantId, {
                 product_id: item.product_id,
                 quantity: item.quantity,
                 branch_id: branchId,
@@ -107,10 +102,10 @@ async function createExpense(body, currentUser) {
         }
     }
 
-    return getExpenseById(expenseId);
+    return getExpenseById(tenantId, expenseId);
 }
 
-async function updateExpense(id, body, currentUser) {
+async function updateExpense(tenantId, id, body, currentUser) {
     if (!id) {
         throw new Error('Noto‘g‘ri xarajat ID');
     }
@@ -118,7 +113,7 @@ async function updateExpense(id, body, currentUser) {
     // validatsiya & totalni qayta hisoblash
     const validated = validateExpenseInput(body);
 
-    const existing = await repo.findById(id);
+    const existing = await repo.findById(tenantId, id);
     if (!existing) {
         throw new Error('Xarajat topilmadi');
     }
@@ -131,51 +126,41 @@ async function updateExpense(id, body, currentUser) {
     };
 
     // headerni yangilash
-    await repo.updateExpenseHeader(id, payload);
+    await repo.updateExpenseHeader(tenantId, id, payload);
 
     // eski itemlarni o'chirib, yangilarini yozamiz
-    await repo.deleteExpenseItems(id);
+    await repo.deleteExpenseItems(tenantId, id);
     for (const item of validated.items) {
-        await repo.insertExpenseItem(id, item);
+        await repo.insertExpenseItem(tenantId, id, item);
     }
 
-    // ❗Eslatma:
-    // Hozircha update/delete paytida warehouse_movements bilan ishlamayapmiz.
-    // To‘liq konsistent qilish uchun warehouse_movements jadvalining to‘liq
-    // strukturasini (source_type, source_id bor-yo‘qligini) ko‘rib,
-    // shu yerda eski harakatlarni "revert" qilib, yangilarini yozish kerak bo‘ladi.
-
-    return getExpenseById(id);
+    return getExpenseById(tenantId, id);
 }
 
-async function deleteExpense(id) {
+async function deleteExpense(tenantId, id) {
     if (!id) {
         throw new Error('Noto‘g‘ri xarajat ID');
     }
-    const existing = await repo.findById(id);
+    const existing = await repo.findById(tenantId, id);
     if (!existing) {
         throw new Error('Xarajat topilmadi');
     }
 
-    await repo.deleteExpenseItems(id);
-    await repo.deleteExpense(id);
-
-    // ❗Hozircha dekor xarajatni o‘chirganda ombordagi qoldiqni qaytarmaymiz.
-    // Buni to‘liq qilish uchun warehouse_movements jadvalidagi manbani
-    // (source_type/source_id) bo‘yicha topib, qarama-qarshi harakat yozish kerak bo‘ladi.
+    await repo.deleteExpenseItems(tenantId, id);
+    await repo.deleteExpense(tenantId, id);
 }
 
-async function getExpensesByType(type) {
+async function getExpensesByType(tenantId, type) {
     const t = (type || '').trim();
     if (!t) {
         throw new Error('type parametri majburiy');
     }
 
-    const headers = await repo.listByType(t);
+    const headers = await repo.listByType(tenantId, t);
     const result = [];
 
     for (const h of headers) {
-        const full = await repo.findById(h.id);
+        const full = await repo.findById(tenantId, h.id);
         if (!full) continue;
 
         result.push({
@@ -193,8 +178,8 @@ async function getExpensesByType(type) {
     return result;
 }
 
-async function getExpenseById(id) {
-    const exp = await repo.findById(id);
+async function getExpenseById(tenantId, id) {
+    const exp = await repo.findById(tenantId, id);
     if (!exp) {
         throw new Error('Xarajat topilmadi');
     }

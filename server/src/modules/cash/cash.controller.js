@@ -7,6 +7,7 @@ function todayISO() {
 
 async function list(req, res) {
     try {
+        const tenantId = req.tenantId;
         const date = req.query.date || todayISO();
         const mode = req.query.mode || "day";
         const branchType = (req.query.branchType || "BRANCH").toUpperCase();
@@ -15,7 +16,7 @@ async function list(req, res) {
         const limit = req.query.limit ? Number(req.query.limit) : 200;
         const offset = req.query.offset ? Number(req.query.offset) : 0;
 
-        const data = await service.list({ date, mode, branchType, branchId, limit, offset });
+        const data = await service.list(tenantId, { date, mode, branchType, branchId, limit, offset });
         res.json(data);
     } catch (err) {
         console.error("cash.list error:", err);
@@ -25,12 +26,13 @@ async function list(req, res) {
 
 async function summary(req, res) {
     try {
+        const tenantId = req.tenantId;
         const date = req.query.date || todayISO();
         const mode = req.query.mode || "day";
         const branchType = (req.query.branchType || "BRANCH").toUpperCase();
         const branchId = req.query.branchId ? Number(req.query.branchId) : null;
 
-        const data = await service.summary({ date, mode, branchType, branchId });
+        const data = await service.summary(tenantId, { date, mode, branchType, branchId });
         res.json({ date, mode, branchType, ...data });
     } catch (err) {
         console.error("cash.summary error:", err);
@@ -40,6 +42,7 @@ async function summary(req, res) {
 
 async function cashOut(req, res) {
     try {
+        const tenantId = req.tenantId;
         const { branch_id, amount, cash_date, note } = req.body || {};
         const branchId = Number(branch_id);
         const amt = Number(amount);
@@ -48,10 +51,9 @@ async function cashOut(req, res) {
             return res.status(400).json({ message: "branch_id va amount (0 dan katta) shart" });
         }
 
-        // created_by ixtiyoriy: agar sizda req.user bo‘lsa, qo‘shib ketadi
         const createdBy = req.user?.id || null;
 
-        const entry = await service.cashOut({
+        const entry = await service.cashOut(tenantId, {
             branch_id: branchId,
             amount: amt,
             cash_date: cash_date || todayISO(),
@@ -68,6 +70,7 @@ async function cashOut(req, res) {
 
 async function cashIn(req, res) {
     try {
+        const tenantId = req.tenantId;
         const { branch_id, amount, cash_date, note } = req.body || {};
         const branchId = Number(branch_id);
         const amt = Number(amount);
@@ -78,7 +81,7 @@ async function cashIn(req, res) {
 
         const createdBy = req.user?.id || null;
 
-        const entry = await service.cashIn({
+        const entry = await service.cashIn(tenantId, {
             branch_id: branchId,
             amount: amt,
             cash_date: cash_date || todayISO(),
@@ -95,10 +98,11 @@ async function cashIn(req, res) {
 
 async function remove(req, res) {
     try {
+        const tenantId = req.tenantId;
         const id = Number(req.params.id);
         if (!id) return res.status(400).json({ message: "id noto‘g‘ri" });
 
-        await service.remove(id);
+        await service.remove(tenantId, id);
         res.json({ ok: true });
     } catch (err) {
         console.error("cash.remove error:", err);
@@ -113,3 +117,4 @@ module.exports = {
     cashIn,
     remove,
 };
+

@@ -4,7 +4,7 @@ async function getCurrentStock(req, res) {
     try {
         const { branch_id } = req.query; // ixtiyoriy filter
 
-        const stock = await service.getCurrentStock(branch_id);
+        const stock = await service.getCurrentStock(req.tenantId, branch_id);
         res.json(stock);
     } catch (err) {
         console.error('getCurrentStock error:', err);
