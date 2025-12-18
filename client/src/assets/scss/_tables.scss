@@ -83,6 +83,23 @@
     overflow-x: auto;
 }
 
+@media (max-width: 540px) {
+    .table {
+        font-size: 12px;
+    }
+
+    .table th,
+    .table td {
+        padding: 10px 10px;
+    }
+
+    .app-table th,
+    .app-table td {
+        padding: 8px 10px;
+        font-size: 12px;
+    }
+}
+
 /* Utility: make last column narrow for action icons */
 .app-table td:last-child {
     width: 80px;

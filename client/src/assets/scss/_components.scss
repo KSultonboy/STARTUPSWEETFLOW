@@ -59,6 +59,18 @@
     }
 }
 
+@media (max-width: 540px) {
+    .card-grid {
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .card {
+        padding: 14px;
+        border-radius: var(--radius-lg);
+    }
+}
+
 /* BADGES */
 .badge {
     display: inline-flex;

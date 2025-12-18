@@ -386,6 +386,35 @@
     }
 }
 
+/* Extra small phones (<= 540px) */
+@media (max-width: 540px) {
+    .app-container {
+        padding: 6px;
+    }
+
+    .app-main {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    .card {
+        padding: 16px;
+    }
+
+    .app-topbar {
+        padding: 6px 8px;
+        margin-bottom: 10px;
+    }
+
+    .app-topbar-right {
+        gap: 6px;
+    }
+
+    .app-content {
+        padding-bottom: 60px;
+    }
+}
+
 @keyframes fadeIn {
     from {
         opacity: 0;
