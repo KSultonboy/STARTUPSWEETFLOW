@@ -2,37 +2,88 @@
 
 .table {
     width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
+    border-collapse: separate;
+    /* Allows border radius */
+    border-spacing: 0;
+    font-size: 14px;
+    color: var(--text-secondary);
 
     th,
     td {
-        padding: 8px 10px;
+        padding: 14px 16px;
         text-align: left;
-        border-bottom: 1px solid $rt-border-subtle;
+        border-bottom: 1px solid var(--border-color);
     }
 
-    thead {
-        background: $rt-table-header-bg;
-
-        th {
-            font-weight: 500;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-            color: $rt-text-muted;
-        }
+    th {
+        font-weight: 600;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+        background: rgba(255, 255, 255, 0.02);
     }
 
     tbody tr {
-        background: $rt-table-row-bg;
+        transition: background 0.2s ease;
+
+        &:last-child td {
+            border-bottom: none;
+        }
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.03);
+            /* Subtle hover row */
+        }
     }
 
-    tbody tr:nth-child(even) {
-        background: $rt-table-row-alt-bg;
+    /* Optional: Rounded corners for first/last cells */
+    thead th:first-child {
+        border-top-left-radius: var(--radius-lg);
     }
 
-    tbody tr:hover {
-        background: rgba(59, 130, 246, 0.06);
+    thead th:last-child {
+        border-top-right-radius: var(--radius-lg);
     }
+}
+
+/* App-specific table styles: full width and clean borders */
+.app-table {
+    width: 100%;
+    border-collapse: collapse; /* crisp single borders */
+    table-layout: fixed; /* columns share available space */
+    width: 100%;
+    color: var(--text-secondary);
+}
+
+.app-table th,
+.app-table td {
+    padding: 12px 14px;
+    border: 1px solid rgba(255,255,255,0.04);
+    text-align: left;
+    vertical-align: middle;
+    word-break: break-word;
+}
+
+.app-table th {
+    background: rgba(255,255,255,0.02);
+    color: var(--text-muted);
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+.app-table tbody tr:hover {
+    background: rgba(255,255,255,0.03);
+}
+
+/* Make table responsive: horizontal scroll on small screens */
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+/* Utility: make last column narrow for action icons */
+.app-table td:last-child {
+    width: 80px;
 }

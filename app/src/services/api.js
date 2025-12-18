@@ -2,8 +2,17 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// API Base URL - env dan yoki default
-export const API_BASE_URL = "http://10.244.171.155:5000/api";
+// API Base URL
+//  - EXPO_PUBLIC_API_URL faqat host yoki domen bo'lsin:
+//      http://localhost:5000
+//      http://192.168.0.10:5000
+//      https://api.mysaas.com
+//  - Quyida trailing slash va /api ni avtomatik tozalaymiz.
+const rawEnv = (process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000").trim();
+let normalized = rawEnv.replace(/\/$/, "");   // oxiridagi / ni olib tashlaymiz
+normalized = normalized.replace(/\/api$/, ""); // agar oxirida /api bo'lsa, uni ham olib tashlaymiz
+
+export const API_BASE_URL = `${normalized}/api`;
 
 const api = axios.create({
     baseURL: API_BASE_URL,

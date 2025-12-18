@@ -4,10 +4,13 @@ import axios from "axios";
 // VITE_API_URL faqat domen bo‘lsin:
 //   Local:    http://localhost:5000
 //   Render:   https://sweetflow-backend.onrender.com
-const RAW_BASE = (import.meta.env.VITE_API_URL || "http://localhost:5000").replace(/\/$/, "");
+// Agar .env da /api bilan yozilgan bo'lsa ham, kodda to'g'irlab olamiz.
+let raw = (import.meta.env.VITE_API_URL || "http://localhost:5000").replace(/\/$/, "");
+// Agar oxirida /api bo'lsa, uni ham olib tashlaymiz
+raw = raw.replace(/\/api$/, "");
 
 // Har doim /api bilan ishlaymiz
-const BASE_URL = `${RAW_BASE}/api`;
+const BASE_URL = `${raw}/api`;
 
 const api = axios.create({
     baseURL: BASE_URL,
@@ -128,6 +131,18 @@ api.interceptors.response.use(
 
             if (window.location.pathname !== "/login") {
                 window.location.href = "/login?expired=1";
+            }
+        }
+
+        // If tenant suspended due to unpaid billing, show a clear message and direct to dashboard/wallet
+        if (status === 403 && message.includes("to'lov") || message.includes('xizmat bloklangan')) {
+            try {
+                alert(error.response?.data?.message || 'To\'lov amalga oshirilmagan. Iltimos, balansni to\'ldiring.');
+            } catch (e) {
+                // ignore UI errors
+            }
+            if (window.location.pathname !== '/') {
+                window.location.href = '/';
             }
         }
 

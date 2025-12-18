@@ -1,6 +1,7 @@
 // client/src/pages/ReportsPage.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import api from "../services/api";
+import { useAuth } from "../context/AuthContext"; // [NEW]
 
 import ReportsFilterBar from "../components/reports/ReportsFilterBar";
 import ReportsSummaryCards from "../components/reports/ReportsSummaryCards";
@@ -12,6 +13,7 @@ import ReportsProductionSection from "../components/reports/ReportsProductionSec
 import ReportsDetailsModal from "../components/reports/ReportsDetailsModal";
 
 function ReportsPage() {
+    const { user } = useAuth(); // [NEW]
     const [stats, setStats] = useState(null);
     const [topProducts, setTopProducts] = useState([]);
     const [monthlySales, setMonthlySales] = useState([]);
@@ -394,7 +396,7 @@ function ReportsPage() {
       <html lang="uz">
         <head>
           <meta charset="UTF-8" />
-          <title>Ruxshona Tort – Hisobot (${date})</title>
+          <title>${user?.tenantName || 'Ruxshona Tort'} – Hisobot (${date})</title>
           <style>
             body {
               font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -431,7 +433,7 @@ function ReportsPage() {
           </style>
         </head>
         <body>
-          <h1>Ruxshona Tort – Umumiy hisobot</h1>
+          <h1>${user?.tenantName || 'Ruxshona Tort'} – Umumiy hisobot</h1>
           <div class="muted">
             Sana: <b>${date}</b> &nbsp; | &nbsp;
             Rejim: <b>${modeLabel}</b>
@@ -536,11 +538,9 @@ function ReportsPage() {
         <div className="page" id="reports-root">
             <div className="page-header">
                 <div>
-                    <h1 className="page-title">Hisobotlar</h1>
+                    <h1 className="page-title">{user?.tenantName || 'Dashboard'} — Hisobotlar</h1>
                     <p className="page-subtitle">
-                        Ruxshona Tort tarmog‘i bo‘yicha filiallar, do‘konlar,
-                        kunlik va oylik statistik ma’lumotlar: savdo, xarajatlar,
-                        sof foyda va ishlab chiqarish.
+                        Filial va do‘konlar bo‘yicha qisqacha kunlik/oylik statistik ma’lumotlar: savdo, xarajatlar va sof foyda.
                     </p>
                 </div>
 

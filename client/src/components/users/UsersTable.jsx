@@ -43,58 +43,28 @@ function UsersTable({ users, branches, loading, onEdit, onDelete }) {
                             <td>{u.full_name}</td>
                             <td>{u.username}</td>
                             <td>
-                                <span
-                                    className="badge"
-                                    style={{
-                                        textTransform: "uppercase",
-                                        fontSize: 11,
-                                        padding: "2px 10px",
-                                        borderRadius: 999,
-                                        background:
-                                            u.role === "admin"
-                                                ? "rgba(96,165,250,0.18)"
-                                                : "rgba(148,163,184,0.18)",
-                                    }}
-                                >
+                                <span className={`badge ${u.role === "admin" ? "badge-primary" : "badge-secondary"}`}>
                                     {u.role}
                                 </span>
                             </td>
                             <td>{getBranchLabel(u, branches)}</td>
                             <td>
-                                <div
-                                    style={{
-                                        display: "flex",
-                                        gap: 6,
-                                        justifyContent: "flex-start",
-                                    }}
-                                >
+                                <div className="history-actions">
                                     <button
                                         type="button"
-                                        className="button-primary"
-                                        style={{
-                                            padding: "3px 8px",
-                                            fontSize: 11,
-                                            boxShadow: "none",
-                                            borderRadius: 999,
-                                        }}
+                                        className="btn-icon btn-icon--edit"
+                                        title="Edit"
                                         onClick={() => onEdit(u)}
                                     >
-                                        ✏️ Edit
+                                        ✏️
                                     </button>
                                     <button
                                         type="button"
-                                        className="button-primary"
-                                        style={{
-                                            padding: "3px 8px",
-                                            fontSize: 11,
-                                            boxShadow: "none",
-                                            background:
-                                                "radial-gradient(circle at 0 0,#f97373,#dc2626)",
-                                            borderRadius: 999,
-                                        }}
+                                        className="btn-icon btn-icon--delete"
+                                        title="Delete"
                                         onClick={() => onDelete(u)}
                                     >
-                                        🗑 Delete
+                                        🗑
                                     </button>
                                 </div>
                             </td>

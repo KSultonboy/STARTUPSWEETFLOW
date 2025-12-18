@@ -419,16 +419,7 @@ function TransfersPage() {
                                 setError("");
                                 setSuccess("");
                             }}
-                            style={{
-                                border: "none",
-                                padding: "4px 12px",
-                                fontSize: 12,
-                                borderRadius: 999,
-                                cursor: "pointer",
-                                backgroundColor:
-                                    mode === "BRANCH" ? "#e5e7eb" : "transparent",
-                                color: mode === "BRANCH" ? "#0b1120" : "#e5e7eb",
-                            }}
+                            className={`button-toggle ${mode === "BRANCH" ? "active" : ""}`}
                         >
                             Filiallar
                         </button>
@@ -441,16 +432,7 @@ function TransfersPage() {
                                 setError("");
                                 setSuccess("");
                             }}
-                            style={{
-                                border: "none",
-                                padding: "4px 12px",
-                                fontSize: 12,
-                                borderRadius: 999,
-                                cursor: "pointer",
-                                backgroundColor:
-                                    mode === "OUTLET" ? "#e5e7eb" : "transparent",
-                                color: mode === "OUTLET" ? "#0b1120" : "#e5e7eb",
-                            }}
+                            className={`button-toggle ${mode === "OUTLET" ? "active" : ""}`}
                         >
                             Do‘konlar
                         </button>

@@ -211,7 +211,7 @@
 |   |   +-- realtime
 |   |   |   \-- index.js
 |   |   +-- utils
-|   |   +-- {config,db
+|   |   +-- config,db
 |   |   |   +-- migrations,modules,
 |   |   |   \-- seeders,modules,
 |   |   +-- app.js

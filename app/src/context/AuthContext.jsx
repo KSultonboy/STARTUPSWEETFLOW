@@ -28,8 +28,12 @@ export function AuthProvider({ children }) {
         })();
     }, []);
 
-    const login = async (username, password) => {
-        const res = await api.post("/auth/login", { username, password });
+    const login = async (username, password, tenantSlug) => {
+        const res = await api.post("/auth/login", {
+            username,
+            password,
+            tenantSlug: tenantSlug || undefined,
+        });
         const { accessToken, refreshToken, user } = res.data;
 
         // tokenlarni saqlaymiz

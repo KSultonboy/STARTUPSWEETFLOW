@@ -5,7 +5,7 @@ import api from "../services/api";
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-    const [user, setUser] = useState(null);   // { id, full_name, role, ... }
+    const [user, setUser] = useState(null);   // { id, full_name, role, tenantId, ... }
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -20,11 +20,14 @@ export function AuthProvider({ children }) {
         setLoading(false);
     }, []);
 
-    const login = async (username, password) => {
-        const res = await api.post("/auth/login", { username, password });
+    const login = async (username, password, tenantSlug) => {
+        const res = await api.post("/auth/login", {
+            username,
+            password,
+            tenantSlug: tenantSlug || undefined
+        });
         const { accessToken, refreshToken, user } = res.data;
 
-        // tokenlarni saqlaymiz
         localStorage.setItem("rt_access_token", accessToken);
         localStorage.setItem("rt_refresh_token", refreshToken);
         localStorage.setItem("rt_user", JSON.stringify(user));
@@ -32,11 +35,23 @@ export function AuthProvider({ children }) {
         setUser(user);
     };
 
+    const loginPlatform = async (email, password) => {
+        const res = await api.post("/platform/auth/login", { email, password });
+        const { token, user } = res.data; // Platform login returns { token, user }
+
+        // We use same storage execution but maybe differentiation is needed?
+        // Since platform owner doesn't have tenant, it fits safely.
+        localStorage.setItem("rt_access_token", token);
+        // Platform owner might not have refresh token in this MVP implementation
+        localStorage.setItem("rt_user", JSON.stringify(user));
+
+        setUser(user);
+    }
+
     const logout = async () => {
         try {
             const refreshToken = localStorage.getItem("rt_refresh_token");
             if (refreshToken) {
-                // serverga ham xabar berib qo'yamiz (hozircha stateless, lekin keyin kengaytirish oson bo'ladi)
                 await api.post("/auth/logout", { refreshToken });
             }
         } catch (err) {
@@ -50,7 +65,7 @@ export function AuthProvider({ children }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, logout }}>
+        <AuthContext.Provider value={{ user, loading, login, loginPlatform, logout }}>
             {children}
         </AuthContext.Provider>
     );

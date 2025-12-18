@@ -5,15 +5,13 @@ import { useAuth } from "../context/AuthContext";
 function LoginPage() {
     const { user, login } = useAuth();
     const navigate = useNavigate();
-    const [form, setForm] = useState({ username: "", password: "" });
+    const [form, setForm] = useState({ username: "", password: "", tenantSlug: "" });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
     // Agar allaqachon login bo'lgan bo'lsa, default route ga yuboramiz
     useEffect(() => {
         if (user) {
-            // "/" ga otamiz, App.jsx ichidagi "*" route
-            // getDefaultPathForUser() ni ishlatib beradi
             navigate("/", { replace: true });
         }
     }, [user, navigate]);
@@ -29,8 +27,7 @@ function LoginPage() {
 
         try {
             setLoading(true);
-            await login(form.username, form.password);
-            // Endi products emas, umumiy "/" ga
+            await login(form.username, form.password, form.tenantSlug);
             navigate("/", { replace: true });
         } catch (err) {
             console.error(err);
@@ -44,47 +41,55 @@ function LoginPage() {
     return (
         <div className="auth-wrapper">
             <div className="auth-logo">
-                <div className="app-logo">R</div>
+                <div className="app-logo">S</div>
             </div>
 
             <div className="card auth-card">
                 <div className="auth-header">
-                    <div className="auth-title">Ruxshona Tort Admin</div>
-                    <div className="auth-subtitle">Ichki tizimga kirish</div>
+                    <div className="auth-title">Xush kelibsiz</div>
+                    <div className="auth-subtitle">Tizimga kirish uchun ma'lumotlaringizni kiriting</div>
                 </div>
 
                 {error && <div className="info-box info-box--error">{error}</div>}
 
                 <form onSubmit={handleSubmit} className="auth-form">
-                    <div className="form-row">
-                        <div className="form-field">
-                            <label>Username</label>
-                            <input
-                                className="input auth-input"
-                                name="username"
-                                value={form.username}
-                                onChange={handleChange}
-                                placeholder="admin"
-                                autoComplete="username"
-                                required
-                            />
-                        </div>
+                    <div className="form-group">
+                        <label>Do'kon ID (Slug)</label>
+                        <input
+                            className="input auth-input"
+                            name="tenantSlug"
+                            value={form.tenantSlug}
+                            onChange={handleChange}
+                            placeholder="ex: ruxshona"
+                            required
+                        />
                     </div>
 
-                    <div className="form-row">
-                        <div className="form-field">
-                            <label>Password</label>
-                            <input
-                                className="input auth-input"
-                                name="password"
-                                type="password"
-                                value={form.password}
-                                onChange={handleChange}
-                                placeholder="••••••••"
-                                autoComplete="current-password"
-                                required
-                            />
-                        </div>
+                    <div className="form-group">
+                        <label>Username</label>
+                        <input
+                            className="input auth-input"
+                            name="username"
+                            value={form.username}
+                            onChange={handleChange}
+                            placeholder="admin"
+                            autoComplete="username"
+                            required
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label>Password</label>
+                        <input
+                            className="input auth-input"
+                            name="password"
+                            type="password"
+                            value={form.password}
+                            onChange={handleChange}
+                            placeholder="••••••••"
+                            autoComplete="current-password"
+                            required
+                        />
                     </div>
 
                     <div className="auth-actions">

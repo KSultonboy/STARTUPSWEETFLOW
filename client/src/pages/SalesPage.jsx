@@ -23,6 +23,10 @@ function SalesPage() {
     const [pendingPayload, setPendingPayload] = useState(null);
     const [shortages, setShortages] = useState(null); // [{product_id, required, available}]
 
+    // Barcode input (hardware skaner + qo'lda kiritish)
+    const [barcodeInput, setBarcodeInput] = useState("");
+    const [barcodeLoading, setBarcodeLoading] = useState(false);
+
     // Mahsulotlarni yuklash
     const fetchProducts = async () => {
         try {
@@ -40,6 +44,44 @@ function SalesPage() {
 
     const findProduct = (id) => {
         return products.find((p) => String(p.id) === String(id));
+    };
+
+    const applyScannedProduct = (product) => {
+        if (!product) return;
+
+        // Mahsulot ro'yxatiga yo'q bo'lsa qo'shib qo'yamiz
+        setProducts((prev) => {
+            const exists = prev.find((p) => p.id === product.id);
+            if (exists) return prev;
+            return [...prev, product];
+        });
+
+        // Sotuv ro'yxatiga qo'shish yoki qty ni oshirish
+        setItems((prev) => {
+            const idx = prev.findIndex(
+                (row) => String(row.product_id) === String(product.id)
+            );
+            if (idx !== -1) {
+                return prev.map((row, i) => {
+                    if (i !== idx) return row;
+                    const currentQty = Number(row.quantity) || 0;
+                    return {
+                        ...row,
+                        quantity: String(currentQty + 1),
+                        unit_price: row.unit_price || String(product.price || ""),
+                    };
+                });
+            }
+
+            return [
+                ...prev,
+                {
+                    product_id: String(product.id),
+                    quantity: "1",
+                    unit_price: String(product.price || ""),
+                },
+            ];
+        });
     };
 
     const handleItemChange = (index, field, value) => {
@@ -171,6 +213,34 @@ function SalesPage() {
         return p ? p.name : `ID: ${productId}`;
     };
 
+    const handleBarcodeSubmit = async (e) => {
+        e.preventDefault();
+        const code = barcodeInput.trim();
+        if (!code) return;
+
+        try {
+            setBarcodeLoading(true);
+            setError("");
+            setSuccess("");
+
+            const res = await api.get(
+                `/products/by-barcode/${encodeURIComponent(code)}`
+            );
+            const product = res.data;
+            applyScannedProduct(product);
+
+            setSuccess(
+                `Shtrix kod bo'yicha mahsulot qo'shildi: ${product.name}`
+            );
+            setBarcodeInput("");
+        } catch (err) {
+            console.error(err);
+            setError("Shtrix kod bo'yicha mahsulot topilmadi.");
+        } finally {
+            setBarcodeLoading(false);
+        }
+    };
+
     return (
         <div className="page">
             <div className="page-header">
@@ -181,7 +251,32 @@ function SalesPage() {
                     </p>
                 </div>
 
-                <div className="page-header-actions">
+                <div className="page-header-actions" style={{ gap: 8 }}>
+                    <form
+                        onSubmit={handleBarcodeSubmit}
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            flexWrap: "wrap",
+                        }}
+                    >
+                        <input
+                            className="input"
+                            type="text"
+                            placeholder="Shtrix kodni skanerlang yoki yozing"
+                            value={barcodeInput}
+                            onChange={(e) => setBarcodeInput(e.target.value)}
+                            style={{ maxWidth: 260 }}
+                        />
+                        <button
+                            type="submit"
+                            className="button-secondary"
+                            disabled={barcodeLoading}
+                        >
+                            {barcodeLoading ? "..." : "Shtrix koddan qo'shish"}
+                        </button>
+                    </form>
                     <input
                         className="input"
                         type="date"
@@ -275,20 +370,12 @@ function SalesPage() {
                                             </td>
                                             <td>{total.toLocaleString("uz-UZ")}</td>
                                             <td>
-                                                {items.length > 1 && (
-                                                    <button
-                                                        type="button"
-                                                        className="button-primary"
-                                                        style={{
-                                                            padding: "4px 8px",
-                                                            fontSize: 11,
-                                                            boxShadow: "none",
-                                                        }}
-                                                        onClick={() => removeRow(index)}
-                                                    >
-                                                        O‘chirish
-                                                    </button>
-                                                )}
+                                                <button
+                                                    className="btn-icon btn-icon--delete"
+                                                    onClick={() => removeRow(index)}
+                                                >
+                                                    🗑
+                                                </button>
                                             </td>
                                         </tr>
                                     );
@@ -397,15 +484,10 @@ function SalesPage() {
                         >
                             <button
                                 type="button"
-                                className="button-primary"
-                                style={{
-                                    backgroundColor: "#e5e7eb",
-                                    color: "#111827",
-                                    boxShadow: "none",
-                                }}
+                                className="button-secondary"
                                 onClick={handleCancelShortage}
                             >
-                                Bekor qilish
+                                Bekor qilish (Esc)
                             </button>
 
                             <button

@@ -6,7 +6,9 @@ import {
     TouchableOpacity,
     ActivityIndicator,
     Alert,
+    Modal,
 } from "react-native";
+import { BarCodeScanner } from "expo-barcode-scanner";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { styles } from "./ReceivingScreen.styles";
@@ -29,6 +31,12 @@ export default function ReceivingScreen() {
 
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
+
+    // Barcode scanner state (Receiving)
+    const [scannerVisible, setScannerVisible] = useState(false);
+    const [scannerPermission, setScannerPermission] = useState(null);
+    const [scannerBusy, setScannerBusy] = useState(false);
+    const [scannerTransferId, setScannerTransferId] = useState(null);
 
     const fetchTransfers = async () => {
         if (!branchId) return;
@@ -77,6 +85,74 @@ export default function ReceivingScreen() {
     };
 
     const toggleExpand = (id) => setExpandedTransferId(expandedTransferId === id ? null : id);
+
+    const openScannerForTransfer = async (transferId) => {
+        setError("");
+        setSuccess("");
+        try {
+            const { status } = await BarCodeScanner.requestPermissionsAsync();
+            const granted = status === "granted";
+            setScannerPermission(granted);
+            if (!granted) {
+                setError("Kamera uchun ruxsat berilmadi.");
+                return;
+            }
+            setScannerBusy(false);
+            setScannerTransferId(transferId);
+            setScannerVisible(true);
+        } catch (err) {
+            console.error(err);
+            setError("Kameraga ruxsat so'rashda xatolik.");
+        }
+    };
+
+    const handleBarCodeScanned = async ({ data }) => {
+        if (scannerBusy) return;
+        setScannerBusy(true);
+
+        try {
+            const code = String(data || "").trim();
+            if (!code) return;
+
+            // 1) Mahsulotni barcode bo'yicha topamiz
+            const res = await api.get(`/products/by-barcode/${encodeURIComponent(code)}`);
+            const product = res.data;
+
+            if (!product || !product.id) {
+                setError("Shtrix kod bo'yicha mahsulot topilmadi.");
+                return;
+            }
+
+            // 2) Skaner faollashtirilgan transferni topamiz
+            const transfer = transfers.find((t) => t.id === scannerTransferId);
+            if (!transfer) {
+                setError("Transfer topilmadi.");
+                return;
+            }
+
+            // 3) Shu transfer ichida ushbu mahsulot bo'yicha PENDING itemni topamiz
+            const pendingItem = (transfer.items || []).find(
+                (it) =>
+                    it.status === "PENDING" &&
+                    String(it.product_id) === String(product.id)
+            );
+
+            if (!pendingItem) {
+                setError("Bu transferda ushbu mahsulot topilmadi yoki allaqachon qabul qilingan.");
+                return;
+            }
+
+            // 4) Itemni qabul qilish oqimini ishga tushiramiz
+            handleAction(transfer.id, pendingItem.id, "accept");
+            setSuccess(`Skaner bo'yicha qabul qilindi: ${product.name}`);
+        } catch (err) {
+            console.error(err);
+            setError("Shtrix kodni qayta ishlashda xatolik.");
+        } finally {
+            setScannerVisible(false);
+            setScannerBusy(false);
+        }
+    };
 
     const handleAction = async (transferId, itemId, action) => {
         if (!branchId) {
@@ -144,6 +220,15 @@ export default function ReceivingScreen() {
                     <View style={styles.cardBody}>
                         <Text style={styles.itemsTitle}>Mahsulotlar:</Text>
 
+                        <View style={{ marginBottom: 8, flexDirection: "row", justifyContent: "flex-end" }}>
+                            <TouchableOpacity
+                                style={styles.scanBtn}
+                                onPress={() => openScannerForTransfer(item.id)}
+                            >
+                                <Text style={styles.scanBtnText}>📷 Skaner bilan qabul qilish</Text>
+                            </TouchableOpacity>
+                        </View>
+
                         {(item.items || []).map((it) => (
                             <View key={it.id} style={styles.itemRow}>
                                 <View style={styles.itemInfo}>
@@ -204,16 +289,102 @@ export default function ReceivingScreen() {
     );
 
     return (
-        <FlatList
-            style={styles.container}
-            data={transfers}
-            renderItem={renderTransferItem}
-            keyExtractor={(item) => String(item.id)}
-            contentContainerStyle={styles.listContent}
-            ListHeaderComponent={ListHeader}
-            ListEmptyComponent={!loading ? <Text style={styles.emptyText}>Hozircha transferlar yo'q</Text> : null}
-            refreshing={loading}
-            onRefresh={fetchTransfers}
-        />
+        <>
+            <FlatList
+                style={styles.container}
+                data={transfers}
+                renderItem={renderTransferItem}
+                keyExtractor={(item) => String(item.id)}
+                contentContainerStyle={styles.listContent}
+                ListHeaderComponent={ListHeader}
+                ListEmptyComponent={!loading ? <Text style={styles.emptyText}>Hozircha transferlar yo'q</Text> : null}
+                refreshing={loading}
+                onRefresh={fetchTransfers}
+            />
+
+            <Modal
+                visible={scannerVisible}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setScannerVisible(false)}
+            >
+                <View
+                    style={{
+                        flex: 1,
+                        backgroundColor: "rgba(0,0,0,0.85)",
+                        justifyContent: "center",
+                        padding: 16,
+                    }}
+                >
+                    <View
+                        style={{
+                            flex: 1,
+                            borderRadius: 12,
+                            overflow: "hidden",
+                            borderWidth: 1,
+                            borderColor: "rgba(148,163,184,0.7)",
+                        }}
+                    >
+                        {scannerPermission ? (
+                            <BarCodeScanner
+                                onBarCodeScanned={handleBarCodeScanned}
+                                style={{ flex: 1 }}
+                            />
+                        ) : (
+                            <View
+                                style={{
+                                    flex: 1,
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    backgroundColor: "#020617",
+                                }}
+                            >
+                                <Text style={{ color: "#e5e7eb", marginBottom: 12, fontSize: 16 }}>
+                                    Kameraga ruxsat berilmadi
+                                </Text>
+                                <TouchableOpacity
+                                    onPress={() => setScannerVisible(false)}
+                                    style={{
+                                        paddingHorizontal: 16,
+                                        paddingVertical: 8,
+                                        borderRadius: 8,
+                                        backgroundColor: "#1f2937",
+                                    }}
+                                >
+                                    <Text style={{ color: "#e5e7eb", fontWeight: "600" }}>Yopish</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                    </View>
+
+                    <View
+                        style={{
+                            marginTop: 12,
+                            padding: 10,
+                            backgroundColor: "rgba(15,23,42,0.95)",
+                            borderRadius: 10,
+                            flexDirection: "row",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                        }}
+                    >
+                        <Text style={{ color: "#e5e7eb", fontSize: 13 }}>
+                            Mahsulot shtrix kodini kameraga yo'naltiring
+                        </Text>
+                        <TouchableOpacity
+                            onPress={() => setScannerVisible(false)}
+                            style={{
+                                paddingHorizontal: 12,
+                                paddingVertical: 6,
+                                borderRadius: 8,
+                                backgroundColor: "#0f172a",
+                            }}
+                        >
+                            <Text style={{ color: "#e5e7eb", fontWeight: "700" }}>Yopish</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+        </>
     );
 }

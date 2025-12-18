@@ -1,41 +1,56 @@
 @use "variables" as *;
 
+/* CARDS */
 .card {
-    background: $rt-surface;
-    border-radius: $rt-radius-lg;
-    padding: 18px 18px 20px;
-    box-shadow: $rt-shadow-soft;
-    border: 1px solid $rt-border-subtle;
+    background: var(--bg-card);
+    border-radius: var(--radius-xl);
+    padding: 24px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover {
+        box-shadow: var(--shadow-md);
+        /* transform: translateY(-2px); // Subtle lift - optional */
+    }
 }
 
 .card-title {
     font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 4px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: var(--text-main);
 }
 
 .card-subtitle {
     font-size: 13px;
-    color: $rt-text-muted;
-    margin-bottom: 18px;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+    font-weight: 500;
 }
 
 .card-value {
-    font-size: 24px;
-    font-weight: 600;
+    font-size: 28px;
+    font-weight: 700;
     margin-bottom: 4px;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--text-main), var(--text-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline-block;
 }
 
+/* GRIDS */
 .card-grid {
     display: grid;
-    gap: 14px;
-    margin-bottom: 18px;
+    gap: 20px;
+    margin-bottom: 24px;
 }
 
 .card-grid-4 {
     grid-template-columns: repeat(4, minmax(0, 1fr));
 
-    @media (max-width: 1100px) {
+    @media (max-width: 1200px) {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
@@ -44,195 +59,243 @@
     }
 }
 
-/* Badge */
+/* BADGES */
 .badge {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    font-size: 11px;
-    padding: 3px 8px;
+    gap: 6px;
+    font-size: 12px;
+    padding: 4px 10px;
     border-radius: 999px;
-    background: $rt-primary-soft;
-    color: $rt-primary;
-    font-weight: 500;
+    background: rgba(var(--color-primary), 0.1);
+    color: var(--color-primary);
+    font-weight: 600;
+    white-space: nowrap;
 }
 
 .badge-success {
-    background: rgba(34, 197, 94, 0.12);
-    color: #22c55e;
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--color-success);
 }
 
 .badge-warning {
-    background: rgba(234, 179, 8, 0.16);
-    color: #eab308;
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--color-accent);
 }
 
 .badge-danger {
-    background: rgba(239, 68, 68, 0.16);
-    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-danger);
 }
 
-/* Info box */
+/* INFO BOX */
 .info-box {
-    padding: 8px 10px;
-    border-radius: $rt-radius-md;
-    font-size: 13px;
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 
     &--error {
-        background: #ffe5e5;
-        color: $rt-danger;
-        border: 1px solid rgba($rt-danger, 0.25);
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--color-danger);
+        border: 1px solid rgba(239, 68, 68, 0.2);
     }
 
     &--muted {
-        background: #f1f5f9;
-        color: $rt-text-muted;
+        background: var(--bg-card);
+        color: var(--text-muted);
+        border: 1px solid var(--border-color);
     }
 }
 
-/* Asosiy button */
+/* BUTTONS */
 .button-primary {
-    padding: 8px 16px;
-    border-radius: $rt-radius-md;
+    padding: 10px 20px;
+    border-radius: var(--radius-md);
     border: none;
-    background-color: $rt-primary;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
     color: #fff;
-    font-weight: 500;
+    font-weight: 600;
     font-size: 14px;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.25);
-    transition: transform 0.08s ease, box-shadow 0.08s ease, opacity 0.08s ease;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    transition: all 0.2s ease;
 
     &:hover {
         transform: translateY(-1px);
-        box-shadow: 0 10px 22px rgba(59, 130, 246, 0.28);
+        box-shadow: 0 6px 16px rgba(79, 70, 229, 0.4);
+        filter: brightness(1.1);
     }
 
     &:active {
-        transform: translateY(1px);
-        box-shadow: 0 3px 8px rgba(59, 130, 246, 0.2);
+        transform: translateY(0);
+        box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
     }
 
     &:disabled {
         opacity: 0.6;
-        cursor: default;
+        cursor: not-allowed;
         box-shadow: none;
         transform: none;
+        filter: grayscale(0.5);
     }
 }
+
+/* Use when you want a button to match input vertical sizing */
+.button--input-size {
+    padding: 10px 12px; /* match .input padding */
+    height: auto;
+    min-height: 40px; /* ensure comfortable click target */
+}
+
 
 .button-danger {
-    padding: 8px 16px;
-    border-radius: $rt-radius-md;
+    padding: 10px 20px;
+    border-radius: var(--radius-md);
     border: none;
-    background-color: rgb(122, 2, 2);
-    color: #fff;
-    font-weight: 500;
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-danger);
+    font-weight: 600;
     font-size: 14px;
     cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.25);
-    transition: transform 0.08s ease, box-shadow 0.08s ease, opacity 0.08s ease;
+    transition: all 0.2s ease;
 
     &:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 10px 22px rgba(59, 130, 246, 0.28);
+        background: rgba(239, 68, 68, 0.2);
     }
-
-    margin-top: 10px;
 }
 
+/* CHARTS & BARS */
 .report-bar-chart {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
 }
 
 .report-bar-row {
     display: grid;
-    grid-template-columns: 60px 1fr 140px;
+    grid-template-columns: 40px 1fr 100px;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
     font-size: 13px;
-}
-
-.report-bar-label {
-    font-weight: 500;
+    color: var(--text-secondary);
 }
 
 .report-bar {
     position: relative;
-    height: 16px;
+    height: 8px;
     border-radius: 999px;
-    background: rgba(0, 0, 0, 0.04);
+    background: rgba(255, 255, 255, 0.05);
     overflow: hidden;
 }
 
 .report-bar-fill {
     height: 100%;
     border-radius: 999px;
-    background: linear-gradient(90deg, #4f46e5, #22c55e);
+    background: linear-gradient(90deg, var(--color-secondary), var(--color-primary));
 }
 
 .report-bar-value {
     text-align: right;
     font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: var(--text-main);
 }
 
-// Tarixdagi amal tugmalari
+/* ACTION BUTTONS (Icons) */
 .history-actions {
     display: inline-flex;
-    gap: 6px;
+    gap: 8px;
+}
+
+/* Simple modal styles for confirmations */
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
     align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.modal {
+    width: 420px;
+    max-width: 95%;
+    background: var(--bg-card);
+    padding: 20px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-lg);
+}
+
+.modal h3 {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+}
+
+.modal p {
+    margin: 0 0 12px 0;
+    color: var(--text-muted);
 }
 
 .btn-icon {
     border: none;
     outline: none;
     cursor: pointer;
-    width: 28px;
-    height: 28px;
-    border-radius: 999px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
-    background: rgba(15, 23, 42, 0.6); // chuqur ko'k fon
-    color: #e5e7eb;
-    transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease;
+    font-size: 16px;
+    background: transparent;
+    color: var(--text-muted);
+    transition: all 0.2s;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-main);
+    }
 }
 
-.btn-icon:focus-visible {
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.6);
-}
-
-.btn-icon:hover {
-    transform: translateY(-1px);
-}
-
-// Edit tugma
 .btn-icon--edit {
-    background: rgba(59, 130, 246, 0.18);
-    color: #60a5fa;
+    &:hover {
+        background: rgba(var(--color-primary), 0.15);
+        color: var(--color-primary);
+    }
 }
 
-.btn-icon--edit:hover {
-    background: rgba(59, 130, 246, 0.32);
-    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.4);
-}
-
-// Delete tugma
 .btn-icon--delete {
-    background: rgba(248, 113, 113, 0.18);
-    color: #fca5a5;
+    &:hover {
+        background: rgba(239, 68, 68, 0.15);
+        color: var(--color-danger);
+    }
 }
 
-.btn-icon--delete:hover {
-    background: rgba(248, 113, 113, 0.32);
-    box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.45);
+/* Secondary (muted) button used as cancel */
+.button-secondary {
+    padding: 10px 12px; /* match input/button size */
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    background: transparent;
+    color: var(--text-main);
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 40px;
+}
+
+.button-secondary:hover {
+    background: rgba(255,255,255,0.03);
 }

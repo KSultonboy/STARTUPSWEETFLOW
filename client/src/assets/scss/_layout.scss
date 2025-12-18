@@ -1,411 +1,388 @@
 @use "variables" as *;
 
-/* Umumiy fon va konteyner */
+/* PREMIUM APP CONTAINER */
 .app-container {
     min-height: 100vh;
-    padding: 20px 14px 24px;
-    background: $rt-body-bg;
-    color: $rt-text-color;
+    padding: 20px;
+    background: var(--bg-main);
+    color: var(--text-main);
+    /* Subtle gradient mesh background optional */
+    background-image:
+        radial-gradient(at 0% 0%, rgba(var(--color-primary), 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(var(--color-secondary), 0.1) 0px, transparent 50%);
+    background-attachment: fixed;
+    transition: all 0.3s ease;
+    overflow-x: hidden;
+    /* Fix horizontal scroll */
 }
 
 .app-shell {
     width: 100%;
-    max-width: $rt-content-max-width;
+    max-width: none; /* allow full width on large screens */
+    /* Wider for dashboard feel */
     margin: 0 auto;
     display: flex;
-    align-items: stretch;
-    gap: 18px;
+    gap: 24px;
+    position: relative;
 }
 
-/* CHAP SIDEBAR */
-.app-sidebar {
-    width: 230px;
-    background: $rt-nav-bg;
-    border-radius: $rt-radius-lg;
-    padding: 14px 12px 12px;
-    box-shadow: $rt-shadow-soft;
+/* MAIN: allow the main column to grow and fill remaining space */
+.app-main {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    height: calc(100vh - 48px);
+    min-width: 0; /* prevent overflow in flex layouts */
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+/* GLASSMORPHISM SIDEBAR */
+.app-sidebar {
+    width: 260px;
+    height: calc(100vh - 40px);
     position: sticky;
     top: 20px;
+    display: flex;
+    flex-direction: column;
+    padding: 24px 16px;
+    gap: 24px;
+
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    z-index: 50;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.app-sidebar--collapsed {
-    width: 72px;
+/* TOPBAR */
+.app-topbar {
+    display: flex;
+    justify-content: space-between;
     align-items: center;
-    padding-inline: 10px;
+    padding: 12px 24px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    border-bottom: 1px solid var(--glass-border);
+    margin-bottom: 24px;
+    border-radius: var(--radius-lg);
+    flex-shrink: 0;
 }
 
-/* Logo + brand */
-.app-sidebar-header {
+/* Page header helpers */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.page-title {
+    font-size: 28px;
+    font-weight: 800;
+}
+
+.page-subtitle {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 6px;
+    max-width: 70%;
+    line-height: 1.4;
+}
+
+
+.app-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-left: auto;
+}
+
+/* Platform owner area (topbar) - make it expand to full width and right-align contents */
+.platform-owner {
     display: flex;
     align-items: center;
     gap: 10px;
+    flex: 1 1 100%; /* allow it to grow and fill available space */
+    justify-content: flex-end; /* keep email and logout aligned to the right */
+}
+
+/* THEME TOGGLE */
+.app-theme-toggle {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: var(--text-muted);
+    }
+}
+
+.app-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid transparent;
+    transition: all 0.2s;
+    cursor: pointer;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: var(--border-color);
+    }
+}
+
+.app-sidebar--collapsed {
+    width: 80px;
+    align-items: center;
+    padding-inline: 12px;
+}
+
+/* BRANDING */
+.app-sidebar-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-left: 8px;
+    /* Alignment fix */
+    margin-bottom: 8px;
 }
 
 .app-logo {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    color: white;
+    font-size: 18px;
+    font-weight: 800;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, $rt-primary, #7c4bff);
-    color: #fff;
-    font-size: 18px;
-    font-weight: 700;
+    box-shadow: var(--shadow-glow);
+    flex-shrink: 0;
 }
 
 .app-brand {
     display: flex;
     flex-direction: column;
-
-    &-title {
-        font-size: 15px;
-        font-weight: 600;
-        color: $rt-text-color; // LIGHT va DARK uchun ham mos bo‘ladi
-    }
-
-    &-subtitle {
-        font-size: 11px;
-        color: $rt-text-muted;
-    }
+    overflow: hidden;
+    white-space: nowrap;
 }
 
-/* Vertical nav */
+.app-brand-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-main);
+    letter-spacing: -0.02em;
+}
+
+.app-brand-subtitle {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+/* NAVIGATION */
 .app-nav-vertical {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    margin-top: 8px;
+    gap: 6px;
+    flex: 1;
+    overflow-y: auto;
+}
 
-    a {
+/* Hide scrollbar for nav */
+.app-nav-vertical::-webkit-scrollbar {
+    width: 4px;
+}
+
+.app-nav-vertical::-webkit-scrollbar-thumb {
+    background: var(--text-muted);
+    border-radius: 4px;
+}
+
+.app-nav-vertical a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: var(--radius-lg);
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.05);
+        /* Very subtle hover */
+        color: var(--text-main);
+    }
+
+    &.active {
+        background: linear-gradient(90deg, rgba(79, 70, 229, 0.15) 0%, transparent 100%);
+        border-left: 3px solid var(--color-primary);
+        color: var(--color-primary);
+        /* Use primary color for text */
+        /* For dark mode readability, ensure primary isn't too dark. Indigo 400 is good */
+    }
+
+    .app-nav-icon {
+        font-size: 18px;
+        width: 20px;
         display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 13px;
-        padding: 8px 10px;
-        border-radius: $rt-radius-md;
-        color: $rt-text-muted; // LIGHT’da ham ko‘rinadi
-        border: 1px solid transparent;
-        text-decoration: none;
-        transition: all 0.15s ease;
-
-        .app-nav-icon {
-            font-size: 16px;
-            width: 18px;
-            text-align: center;
-        }
-
-        .app-nav-label {
-            white-space: nowrap;
-        }
-
-        &.active {
-            background: $rt-primary-soft;
-            color: $rt-primary; // DARK va LIGHT ikkalasida ham yaxshi ko‘rinadi
-            border-color: $rt-primary;
-            font-weight: 500;
-        }
-
-        &:hover {
-            background: rgba(148, 163, 184, 0.14);
-            color: $rt-text-color;
-        }
+        justify-content: center;
     }
 }
 
-/* collapse holati */
-.app-sidebar--collapsed {
-    .app-brand {
+/* COLLAPSED STATE */
+.app-sidebar--collapsed .app-brand {
+    display: none;
+}
+
+.app-sidebar--collapsed .app-nav-vertical a {
+    justify-content: center;
+    padding: 12px;
+
+    .app-nav-label {
         display: none;
     }
-
-    .app-nav-vertical a {
-        justify-content: center;
-
-        .app-nav-label {
-            display: none;
-        }
-    }
 }
 
-/* Sidebar pastidagi tugma */
-.app-sidebar-toggle {
-    margin-top: auto;
-    align-self: flex-end;
-    border: none;
-    border-radius: 999px;
-    padding: 4px 8px;
-    font-size: 14px;
-    background: rgba(15, 23, 42, 0.7);
-    color: #e5e7eb;
-    cursor: pointer;
-    transition: background 0.15s ease, transform 0.1s ease;
-
-    &:hover {
-        background: rgba(15, 23, 42, 0.95);
-        transform: translateX(1px);
-    }
-}
-
-.app-sidebar--collapsed .app-sidebar-toggle {
-    align-self: center;
-}
-
-/* O‘NG TOMON – main qismi */
-.app-main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-/* Tepadagi panel (profil + theme) */
-.app-topbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: $rt-nav-bg;
-    border-radius: $rt-radius-lg;
-    padding: 8px 14px;
-    box-shadow: $rt-shadow-soft;
-}
-
-.app-topbar-left {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.app-topbar-right {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-/* Theme toggle tugmasi */
-.app-theme-toggle {
-    border: none;
-    border-radius: 999px;
-    padding: 4px 10px;
-    font-size: 12px;
+/* SIDEBAR TOGGLES */
+.app-hamburger {
+    display: none;
     background: transparent;
-    color: $rt-text-muted;
+    border: none;
+    font-size: 24px;
+    color: var(--text-main);
     cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    transition: background 0.15s ease, color 0.15s ease;
-
-    span {
-        font-size: 11px;
-    }
-
-    &:hover {
-        background: rgba(148, 163, 184, 0.16);
-        color: $rt-text-color;
-    }
+    padding: 4px;
 }
 
-/* Foydalanuvchi info + avatar */
-.app-user {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-
-    &-avatar {
-        width: 30px;
-        height: 30px;
-        border-radius: 999px;
-        background: linear-gradient(135deg, $rt-primary, #7c4bff);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 14px;
-        font-weight: 600;
-        color: #fff;
-    }
-
-    &-text {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-    }
-
-    &-name {
-        font-size: 13px;
-        color: $rt-text-color; // avval oq edi, light’da yo‘qolib qolardi
-    }
-
-    &-role {
-        font-size: 11px;
-        color: $rt-text-muted;
-    }
-}
-
-/* Kontent */
-.app-content {
-    flex: 1;
-}
-
-/* Sahifa layoutlari */
-.page {
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-}
-
-.page-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 14px;
-    margin-bottom: 2px;
-}
-
-.page-title {
-    font-size: 20px;
-    font-weight: 600;
-    margin-bottom: 4px;
-}
-
-.page-subtitle {
-    font-size: 13px;
-    color: $rt-text-muted;
-}
-
-.page-section {
-    margin-top: 6px;
-}
-
-.page-section-header {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    margin-bottom: 8px;
-}
-
-.page-section-title {
-    font-size: 16px;
-    font-weight: 600;
-}
-
-.page-section-subtitle {
-    font-size: 12px;
-    color: $rt-text-muted;
-}
-
-.page-header-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.table-wrapper {
-    width: 100%;
-    overflow-x: auto;
-}
-
-/* Responsiv */
-@media (max-width: 900px) {
-    .app-shell {
-        flex-direction: column;
-    }
-
-    .app-sidebar {
-        position: static;
-        height: auto;
-        flex-direction: row;
-        align-items: center;
-        padding: 10px;
-    }
-
-    .app-sidebar--collapsed {
-        width: 100%;
-    }
-
-    .app-nav-vertical {
-        flex-direction: row;
-        flex-wrap: wrap;
-        margin-top: 0;
-    }
-
-    .app-topbar {
-        justify-content: space-between;
-    }
-
-    .page-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .page-header-actions {
-        width: 100%;
-        flex-wrap: wrap;
-
-        .input {
-            flex: 1;
-            min-width: 160px;
-        }
-    }
-}
-
-.modal-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, .55);
+.app-sidebar-toggle-desktop {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 18px;
-    z-index: 9999;
-}
-
-.modal {
-    width: 100%;
-    max-width: 520px;
-    background: var(--rt-card-bg, #0b1220);
-    border: 1px solid rgba(148, 163, 184, .18);
-    border-radius: 14px;
-    box-shadow: 0 18px 60px rgba(0, 0, 0, .45);
-    overflow: hidden;
-}
-
-.modal-header {
-    padding: 12px 14px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid rgba(148, 163, 184, .12);
-}
-
-.modal-title {
-    font-weight: 700;
-}
-
-.modal-close {
-    border: none;
-    background: transparent;
     cursor: pointer;
-    color: inherit;
-    font-size: 16px;
+    align-self: flex-end;
+    transition: all 0.2s;
+
+    &:hover {
+        border-color: var(--color-primary);
+        color: var(--color-primary);
+    }
 }
 
-.modal-body {
-    padding: 14px;
+.app-sidebar--collapsed .app-sidebar-toggle-desktop {
+    align-self: center;
 }
 
-.modal-footer {
-    padding: 12px 14px;
-    border-top: 1px solid rgba(148, 163, 184, .12);
+/* RESPONSIVE (< 768px) */
+@media (max-width: 768px) {
+    .app-shell {
+        gap: 0;
+    }
+
+    /* Sidebar becomes off-canvas drawer */
+    .app-sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        width: 280px;
+        z-index: 100;
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border-right: 1px solid var(--glass-border);
+        background: var(--bg-sidebar);
+        /* Solid bg for better contrast on mobile */
+    }
+
+    /* When NOT collapsed (i.e., OPEN on mobile), slide in */
+    .app-shell:not(.is-collapsed) .app-sidebar {
+        transform: translateX(0);
+        box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Overlay Backdrop when sidebar is open */
+    .app-shell:not(.is-collapsed)::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 90;
+        animation: fadeIn 0.2s ease;
+    }
+
+    .app-sidebar-toggle-desktop {
+        display: none;
+    }
+
+    .app-hamburger {
+        display: block;
+    }
+
+    /* MAIN CONTENT AREA */
+    .app-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        /* Prevent flex overflow */
+        margin-left: 20px;
+        margin-right: 20px;
+        /* Added right margin as requested */
+    }
+
+    .app-content {
+        flex: 1;
+        /* Allow content to grow */
+        width: 100%;
+    }
+
+    /* Adjust page container padding for mobile */
+    .app-container {
+        padding: 10px;
+    }
+
+    /* Adjust topbar for mobile */
+    .app-topbar {
+        padding: 10px;
+        margin-bottom: 20px;
+    }
 }
 
-.label {
-    display: block;
-    font-size: 12px;
-    opacity: .8;
-    margin-bottom: 6px;
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }

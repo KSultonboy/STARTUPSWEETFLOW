@@ -210,15 +210,10 @@ function ProductionPage() {
                                             {items.length > 1 && (
                                                 <button
                                                     type="button"
-                                                    className="button-primary"
-                                                    style={{
-                                                        padding: "4px 8px",
-                                                        fontSize: 11,
-                                                        boxShadow: "none",
-                                                    }}
+                                                    className="btn-icon btn-icon--delete"
                                                     onClick={() => removeRow(index)}
                                                 >
-                                                    O‘chirish
+                                                    🗑
                                                 </button>
                                             )}
                                         </td>
@@ -247,7 +242,6 @@ function ProductionPage() {
                         <button
                             type="button"
                             className="button-primary"
-                            style={{ boxShadow: "none" }}
                             onClick={addRow}
                         >
                             Qator qo‘shish

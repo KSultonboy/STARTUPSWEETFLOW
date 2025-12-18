@@ -50,7 +50,7 @@ function CustomDrawerContent(props) {
     const { user, logout } = useAuth();
 
     const role = String(user?.role || "").toLowerCase();
-    const isAdmin = role === "admin";
+    const isAdmin = role === "admin" || role === "tenant_admin";
     const isBranch = role === "branch";
     const isProduction = role === "production";
 
@@ -164,7 +164,7 @@ export default function AppDrawer() {
     const { user } = useAuth();
 
     const role = String(user?.role || "").toLowerCase();
-    const isAdmin = role === "admin";
+    const isAdmin = role === "admin" || role === "tenant_admin";
     const isBranch = role === "branch";
     const isProduction = role === "production";
 

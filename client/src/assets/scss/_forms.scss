@@ -5,40 +5,84 @@ input,
 select,
 textarea {
     width: 100%;
-    padding: 9px 11px;
-    border-radius: $rt-radius-md;
-    border: 1px solid $rt-border-subtle;
-    background: $rt-input-bg;
-    color: $rt-text-color;
-    font-size: 13px;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.03);
+    /* Subtle dark input bg */
+    color: var(--text-main);
+    font-size: 14px;
     outline: none;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease,
-        background 0.15s ease;
+    transition: all 0.2s ease;
 
     &::placeholder {
-        color: $rt-text-muted;
+        color: var(--text-muted);
     }
 
     &:focus {
-        border-color: $rt-primary;
-        box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.4);
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+        /* Indigo glow */
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        background: rgba(0, 0, 0, 0.1);
     }
 }
 
 label {
     display: block;
-    font-size: 12px;
-    margin-bottom: 4px;
-    color: $rt-text-muted;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: var(--text-secondary);
 }
 
 .form-row {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
-    margin-bottom: 14px;
+    gap: 16px;
+    margin-bottom: 20px;
 
     @media (max-width: 900px) {
         grid-template-columns: 1fr;
+    }
+}
+
+/* Helper for checkbox/radio alignment if needed */
+.form-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    input[type="checkbox"],
+    input[type="radio"] {
+        width: auto;
+        margin: 0;
+    }
+}
+
+/* Feature toggles (used on Plans page) */
+.feature-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    color: var(--text-main);
+    cursor: pointer;
+
+    input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        margin: 0;
+        accent-color: rgb(var(--color-primary));
+    }
+
+    span {
+        font-weight: 500;
+        color: var(--text-secondary);
     }
 }

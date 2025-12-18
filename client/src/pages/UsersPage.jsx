@@ -168,16 +168,7 @@ function UsersPage() {
                 <div className="card-title">Foydalanuvchilar (Users)</div>
 
                 {error && (
-                    <div
-                        style={{
-                            marginBottom: 12,
-                            padding: 8,
-                            borderRadius: 8,
-                            background: "#ffe5e5",
-                            color: "#a20000",
-                            fontSize: 13,
-                        }}
-                    >
+                    <div className="info-box info-box--error" style={{ marginBottom: 12 }}>
                         {error}
                     </div>
                 )}

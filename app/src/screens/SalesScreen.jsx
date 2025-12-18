@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, TextInput, Pressable, FlatList, ActivityIndicator, Modal } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { useNavigation } from "@react-navigation/native";
+import { BarCodeScanner } from "expo-barcode-scanner";
 
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -24,6 +25,11 @@ export default function SalesScreen() {
 
     const [pendingPayload, setPendingPayload] = useState(null);
     const [shortages, setShortages] = useState(null);
+
+    // Barcode scanner state
+    const [scannerVisible, setScannerVisible] = useState(false);
+    const [scannerPermission, setScannerPermission] = useState(null);
+    const [scannerBusy, setScannerBusy] = useState(false);
 
     useEffect(() => {
         navigation.setOptions({
@@ -55,6 +61,80 @@ export default function SalesScreen() {
     }, [products]);
 
     const findProduct = (id) => productOptions.find((p) => String(p.id) === String(id));
+
+    const applyScannedProduct = (product) => {
+        if (!product) return;
+
+        setProducts((prev) => {
+            const exists = prev.find((p) => p.id === product.id);
+            if (exists) return prev;
+            return [...prev, product];
+        });
+
+        setItems((prev) => {
+            const idx = prev.findIndex((row) => String(row.product_id) === String(product.id));
+            if (idx !== -1) {
+                return prev.map((row, i) => {
+                    if (i !== idx) return row;
+                    const currentQty = Number(row.quantity) || 0;
+                    return {
+                        ...row,
+                        quantity: String(currentQty + 1),
+                        unit_price: row.unit_price || String(product.price || ""),
+                    };
+                });
+            }
+
+            return [
+                ...prev,
+                {
+                    product_id: String(product.id),
+                    quantity: "1",
+                    unit_price: String(product.price || ""),
+                },
+            ];
+        });
+    };
+
+    const lookupByBarcode = async (code) => {
+        const trimmed = String(code || "").trim();
+        if (!trimmed) return;
+        try {
+            const res = await api.get(`/products/by-barcode/${encodeURIComponent(trimmed)}`);
+            const product = res.data;
+            applyScannedProduct(product);
+            setSuccess(`Shtrix kod bo'yicha mahsulot qo'shildi: ${product.name}`);
+        } catch (err) {
+            console.error(err);
+            setError("Shtrix kod bo'yicha mahsulot topilmadi.");
+        }
+    };
+
+    const openScanner = async () => {
+        setError("");
+        setSuccess("");
+        try {
+            const { status } = await BarCodeScanner.requestPermissionsAsync();
+            setScannerPermission(status === "granted");
+            if (status !== "granted") {
+                setError("Kamera uchun ruxsat berilmadi.");
+                return;
+            }
+            setScannerBusy(false);
+            setScannerVisible(true);
+        } catch (err) {
+            console.error(err);
+            setError("Kameraga ruxsat so'rashda xatolik.");
+        }
+    };
+
+    const handleBarCodeScanned = async ({ data }) => {
+        if (scannerBusy) return;
+        setScannerBusy(true);
+        await lookupByBarcode(data);
+        setScannerVisible(false);
+        setScannerBusy(false);
+    };
 
     const handleItemChange = (index, field, value) => {
         setItems((prev) =>
@@ -299,6 +379,28 @@ export default function SalesScreen() {
                     placeholder="YYYY-MM-DD"
                     placeholderTextColor={colors.muted}
                 />
+
+                <View style={{ flexDirection: "row", marginTop: 12, gap: 8 }}>
+                    <Pressable
+                        onPress={openScanner}
+                        style={({ pressed }) => [
+                            {
+                                flex: 1,
+                                paddingVertical: 10,
+                                borderRadius: radius.md,
+                                backgroundColor: colors.panel,
+                                borderWidth: 1,
+                                borderColor: colors.border,
+                                alignItems: "center",
+                            },
+                            pressed && { opacity: 0.85 },
+                        ]}
+                    >
+                        <Text style={[typography.body, { color: colors.text, fontWeight: "800" }]}>
+                            📷 Shtrix kodni skanerlash
+                        </Text>
+                    </Pressable>
+                </View>
             </Card>
 
             {error ? (
@@ -370,6 +472,57 @@ export default function SalesScreen() {
                     </Pressable>
                 </View>
             </Card>
+
+            {/* Barcode Scanner Modal */}
+            <Modal visible={scannerVisible} transparent animationType="slide" onRequestClose={() => setScannerVisible(false)}>
+                <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.85)", justifyContent: "center" }}>
+                    <View style={{ flex: 1 }}>
+                        {scannerPermission === false ? (
+                            <View
+                                style={{
+                                    flex: 1,
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    padding: 16,
+                                }}
+                            >
+                                <Text style={[typography.body, { color: "#fecaca", textAlign: "center" }]}>
+                                    Kameraga ruxsat berilmagan. Iltimos, telefon sozlamalarida ruxsat bering.
+                                </Text>
+                            </View>
+                        ) : (
+                            <BarCodeScanner
+                                onBarCodeScanned={scannerBusy ? undefined : handleBarCodeScanned}
+                                style={{ flex: 1 }}
+                            />
+                        )}
+                    </View>
+                    <View
+                        style={{
+                            padding: 12,
+                            backgroundColor: "rgba(15,23,42,0.95)",
+                            flexDirection: "row",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                        }}
+                    >
+                        <Text style={[typography.small, { color: colors.text }]}>
+                            Shtrix kodni kameraga yo'naltiring
+                        </Text>
+                        <Pressable
+                            onPress={() => setScannerVisible(false)}
+                            style={{
+                                paddingHorizontal: 12,
+                                paddingVertical: 6,
+                                borderRadius: radius.md,
+                                backgroundColor: colors.panel,
+                            }}
+                        >
+                            <Text style={{ color: colors.text, fontWeight: "700" }}>Yopish</Text>
+                        </Pressable>
+                    </View>
+                </View>
+            </Modal>
 
             {/* Shortage Modal */}
             <Modal visible={!!shortages} transparent animationType="fade" onRequestClose={() => setShortages(null)}>

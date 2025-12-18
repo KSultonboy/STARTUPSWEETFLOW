@@ -29,6 +29,7 @@ function ProductsPage() {
 
     const [form, setForm] = useState({
         name: "",
+        barcode: "",
         unit: "dona", // 'dona' yoki 'kg'
         price: "",
         wholesale_price: "",
@@ -90,6 +91,7 @@ function ProductsPage() {
     const resetForm = () => {
         setForm({
             name: "",
+            barcode: "",
             unit: "dona",
             price: "",
             wholesale_price: "",
@@ -119,6 +121,7 @@ function ProductsPage() {
 
             const payload = {
                 name: form.name.trim(),
+                barcode: (form.barcode || "").trim(),
                 unit: isUtility ? "dona" : form.unit,
                 category: form.category,
                 price: Number(form.price) || 0,
@@ -154,6 +157,7 @@ function ProductsPage() {
         setEditingId(product.id);
         setForm({
             name: product.name || "",
+            barcode: product.barcode || "",
             unit: product.unit === "kg" ? "kg" : "dona",
             price: typeof product.price === "number" ? String(product.price) : "",
             wholesale_price:

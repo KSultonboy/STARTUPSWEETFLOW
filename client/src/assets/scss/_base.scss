@@ -10,21 +10,32 @@ html,
 body,
 #root {
     height: 100%;
+    margin: 0;
+    padding: 0;
 }
 
 body {
-    margin: 0;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-        sans-serif;
-    background: $rt-body-bg;
-    color: $rt-text-color;
+    font-family: var(--font-family-base);
+    background: var(--bg-main);
+    color: var(--text-main);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 a {
     text-decoration: none;
     color: inherit;
+    cursor: pointer;
 }
 
-p {
+ul,
+ol {
+    list-style: none;
+    padding: 0;
     margin: 0;
+}
+
+button {
+    font-family: inherit;
 }

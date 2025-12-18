@@ -1,71 +1,68 @@
-/* CSS custom property lar – theme boshqarish uchun */
-
 :root {
-    --rt-primary: #3b82f6;
-    --rt-primary-soft: rgba(59, 130, 246, 0.16);
-    --rt-danger: #ef4444;
+  /* --- 1. CORE PALETTE (Modern Slate/Indigo) --- */
+  --color-primary: #4f46e5;       /* Indigo 600 */
+  --color-primary-hover: #4338ca; /* Indigo 700 */
+  --color-secondary: #0ea5e9;     /* Sky 500 */
+  --color-accent: #f59e0b;        /* Amber 500 */
+  --color-danger: #ef4444;        /* Red 500 */
+  --color-success: #10b981;       /* Emerald 500 */
+  --color-warning: #f97316;       /* Orange 500 */
 
-    --rt-radius-md: 8px;
-    --rt-radius-lg: 18px;
-    --rt-shadow-soft: 0 18px 40px rgba(15, 23, 42, 0.45);
-    --rt-content-max-width: 1280px;
+  /* --- 2. DARK THEME (Default) --- */
+  /* Main Background: Deep rich dark blue-grey */
+  --bg-main: #0f172a;      /* Slate 900 */
+  --bg-card: #1e293b;      /* Slate 800 */
+  --bg-sidebar: #0f172a;   /* Slate 900 */
+  
+  /* Text Colors */
+  --text-main: #f1f5f9;    /* Slate 100 */
+  --text-secondary: #94a3b8; /* Slate 400 */
+  --text-muted: #64748b;   /* Slate 500 */
+  --text-inverse: #ffffff;
+
+  /* Borders & Dividers */
+  --border-color: #334155; /* Slate 700 */
+
+  /* Glassmorphism */
+  --glass-bg: rgba(30, 41, 59, 0.7); /* Dark semi-transparent */
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-blur: 16px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+  --shadow-glow: 0 0 15px rgba(79, 70, 229, 0.4); /* Indigo glow */
+
+  /* Radii */
+  --radius-sm: 0.375rem; /* 6px */
+  --radius-md: 0.5rem;   /* 8px */
+  --radius-lg: 0.75rem;  /* 12px */
+  --radius-xl: 1rem;     /* 16px */
+
+  /* Typography */
+  --font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
-/* DARK THEME */
-:root[data-theme="dark"] {
-    --rt-body-bg: radial-gradient(circle at top, #1e293b 0, #020617 55%, #000 100%);
-    --rt-surface: #020617;
-    --rt-surface-elevated: #020617;
-    --rt-nav-bg: #020617;
-    --rt-border-subtle: rgba(148, 163, 184, 0.22);
-    --rt-text-color: #e5e7eb;
-    --rt-text-muted: #9ca3af;
+/* --- 3. LIGHT THEME OVERRIDES --- */
+[data-theme="light"] {
+  --bg-main: #f8fafc;      /* Slate 50 */
+  --bg-card: #ffffff;      /* White */
+  --bg-sidebar: #ffffff;   /* White */
 
-    --rt-table-header-bg: rgba(15, 23, 42, 0.9);
-    --rt-table-row-bg: rgba(15, 23, 42, 0.6);
-    --rt-table-row-alt-bg: rgba(15, 23, 42, 0.3);
+  --text-main: #0f172a;    /* Slate 900 */
+  --text-secondary: #475569; /* Slate 600 */
+  --text-muted: #94a3b8;   /* Slate 400 */
+  
+  --border-color: #e2e8f0; /* Slate 200 */
 
-    --rt-input-bg: rgba(15, 23, 42, 0.95);
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: rgba(0, 0, 0, 0.05);
+
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
-/* LIGHT THEME */
-:root[data-theme="light"] {
-    --rt-body-bg: #f3f4f6;
-    --rt-surface: #ffffff;
-    --rt-surface-elevated: #ffffff;
-    --rt-nav-bg: #ffffff;
-    --rt-border-subtle: rgba(148, 163, 184, 0.45);
-    --rt-text-color: #0f172a;
-    --rt-text-muted: #6b7280;
-
-    --rt-table-header-bg: #e5e7eb;
-    --rt-table-row-bg: #ffffff;
-    --rt-table-row-alt-bg: #f9fafb;
-
-    --rt-input-bg: #ffffff;
-}
-
-/* SCSS tokenlar – hamma joyda shularni ishlatyapmiz */
-
-$rt-primary: var(--rt-primary);
-$rt-primary-soft: var(--rt-primary-soft);
-$rt-danger: var(--rt-danger);
-
-$rt-radius-md: var(--rt-radius-md);
-$rt-radius-lg: var(--rt-radius-lg);
-$rt-shadow-soft: var(--rt-shadow-soft);
-$rt-content-max-width: var(--rt-content-max-width);
-
-$rt-body-bg: var(--rt-body-bg);
-$rt-surface: var(--rt-surface);
-$rt-surface-elevated: var(--rt-surface-elevated);
-$rt-nav-bg: var(--rt-nav-bg);
-$rt-border-subtle: var(--rt-border-subtle);
-$rt-text-color: var(--rt-text-color);
-$rt-text-muted: var(--rt-text-muted);
-
-$rt-table-header-bg: var(--rt-table-header-bg);
-$rt-table-row-bg: var(--rt-table-row-bg);
-$rt-table-row-alt-bg: var(--rt-table-row-alt-bg);
-
-$rt-input-bg: var(--rt-input-bg);
+/* SCSS Variables (Mapped to CSS Vars for usage in mixins if needed) */
+$primary: var(--color-primary);
+$bg-main: var(--bg-main);
+$text-main: var(--text-main);
