@@ -1,5 +1,76 @@
 ﻿Project Structure:
 +-- app
+|   +-- android
+|   |   +-- app
+|   |   |   +-- src
+|   |   |   |   +-- debug
+|   |   |   |   |   \-- AndroidManifest.xml
+|   |   |   |   +-- debugOptimized
+|   |   |   |   |   \-- AndroidManifest.xml
+|   |   |   |   \-- main
+|   |   |   |       +-- java
+|   |   |   |       |   \-- com
+|   |   |   |       |       \-- ruhshonatortapps
+|   |   |   |       |           \-- app
+|   |   |   |       |               +-- MainActivity.kt
+|   |   |   |       |               \-- MainApplication.kt
+|   |   |   |       +-- res
+|   |   |   |       |   +-- drawable
+|   |   |   |       |   |   +-- ic_launcher_background.xml
+|   |   |   |       |   |   \-- rn_edit_text_material.xml
+|   |   |   |       |   +-- drawable-hdpi
+|   |   |   |       |   |   \-- splashscreen_logo.png
+|   |   |   |       |   +-- drawable-mdpi
+|   |   |   |       |   |   \-- splashscreen_logo.png
+|   |   |   |       |   +-- drawable-xhdpi
+|   |   |   |       |   |   \-- splashscreen_logo.png
+|   |   |   |       |   +-- drawable-xxhdpi
+|   |   |   |       |   |   \-- splashscreen_logo.png
+|   |   |   |       |   +-- drawable-xxxhdpi
+|   |   |   |       |   |   \-- splashscreen_logo.png
+|   |   |   |       |   +-- mipmap-anydpi-v26
+|   |   |   |       |   |   +-- ic_launcher.xml
+|   |   |   |       |   |   \-- ic_launcher_round.xml
+|   |   |   |       |   +-- mipmap-hdpi
+|   |   |   |       |   |   +-- ic_launcher.webp
+|   |   |   |       |   |   +-- ic_launcher_foreground.webp
+|   |   |   |       |   |   \-- ic_launcher_round.webp
+|   |   |   |       |   +-- mipmap-mdpi
+|   |   |   |       |   |   +-- ic_launcher.webp
+|   |   |   |       |   |   +-- ic_launcher_foreground.webp
+|   |   |   |       |   |   \-- ic_launcher_round.webp
+|   |   |   |       |   +-- mipmap-xhdpi
+|   |   |   |       |   |   +-- ic_launcher.webp
+|   |   |   |       |   |   +-- ic_launcher_foreground.webp
+|   |   |   |       |   |   \-- ic_launcher_round.webp
+|   |   |   |       |   +-- mipmap-xxhdpi
+|   |   |   |       |   |   +-- ic_launcher.webp
+|   |   |   |       |   |   +-- ic_launcher_foreground.webp
+|   |   |   |       |   |   \-- ic_launcher_round.webp
+|   |   |   |       |   +-- mipmap-xxxhdpi
+|   |   |   |       |   |   +-- ic_launcher.webp
+|   |   |   |       |   |   +-- ic_launcher_foreground.webp
+|   |   |   |       |   |   \-- ic_launcher_round.webp
+|   |   |   |       |   +-- values
+|   |   |   |       |   |   +-- colors.xml
+|   |   |   |       |   |   +-- strings.xml
+|   |   |   |       |   |   \-- styles.xml
+|   |   |   |       |   \-- values-night
+|   |   |   |       |       \-- colors.xml
+|   |   |   |       \-- AndroidManifest.xml
+|   |   |   +-- build.gradle
+|   |   |   +-- debug.keystore
+|   |   |   \-- proguard-rules.pro
+|   |   +-- gradle
+|   |   |   \-- wrapper
+|   |   |       +-- gradle-wrapper.jar
+|   |   |       \-- gradle-wrapper.properties
+|   |   +-- .gitignore
+|   |   +-- build.gradle
+|   |   +-- gradle.properties
+|   |   +-- gradlew
+|   |   +-- gradlew.bat
+|   |   \-- settings.gradle
 |   +-- assets
 |   |   +-- adaptive-icon.png
 |   |   +-- favicon.png
@@ -7,38 +78,65 @@
 |   |   \-- splash-icon.png
 |   +-- src
 |   |   +-- components
-|   |   |   \-- reports
-|   |   |       +-- ReportsExpensesByTypeSection.jsx
-|   |   |       +-- ReportsMonthlyBarChartNative.jsx
-|   |   |       +-- ReportsProductionSectionNative.jsx
-|   |   |       +-- ReportsSalesByBranchSection.jsx
-|   |   |       +-- ReportsSummaryCardsNative.jsx
-|   |   |       \-- ReportsTopProductsSection.jsx
+|   |   |   +-- layout
+|   |   |   |   \-- MenuModal.jsx
+|   |   |   +-- reports
+|   |   |   |   +-- ReportsExpensesByTypeSection.jsx
+|   |   |   |   +-- ReportsMonthlyBarChartNative.jsx
+|   |   |   |   +-- ReportsProductionSectionNative.jsx
+|   |   |   |   +-- ReportsSalesByBranchSection.jsx
+|   |   |   |   +-- ReportsSummaryCardsNative.jsx
+|   |   |   |   \-- ReportsTopProductsSection.jsx
+|   |   |   \-- ui
+|   |   |       +-- Button.jsx
+|   |   |       +-- Card.jsx
+|   |   |       +-- Screen.jsx
+|   |   |       \-- TextField.jsx
 |   |   +-- context
 |   |   |   \-- AuthContext.jsx
 |   |   +-- navigation
+|   |   |   +-- AppDrawer.jsx
 |   |   |   \-- RootNavigator.jsx
 |   |   +-- screens
 |   |   |   +-- BranchesScreen.jsx
+|   |   |   +-- BranchesScreen.styles.js
 |   |   |   +-- ExpensesScreen.jsx
+|   |   |   +-- ExpensesScreen.styles.js
 |   |   |   +-- HistoryScreen.jsx
 |   |   |   +-- HomeScreen.jsx
 |   |   |   +-- LoginScreen.jsx
 |   |   |   +-- ProductionScreen.jsx
 |   |   |   +-- ProductsScreen.jsx
 |   |   |   +-- ReceivingScreen.jsx
+|   |   |   +-- ReceivingScreen.styles.js
 |   |   |   +-- ReportsScreen.jsx
 |   |   |   +-- ReturnsScreen.jsx
+|   |   |   +-- ReturnsScreen.styles.js
 |   |   |   +-- SalesScreen.jsx
 |   |   |   +-- TransfersScreen.jsx
+|   |   |   +-- TransfersScreen.styles.js
 |   |   |   +-- UsersScreen.jsx
+|   |   |   +-- UsersScreen.styles.js
 |   |   |   \-- WarehouseScreen.jsx
-|   |   \-- services
-|   |       \-- api.js
+|   |   +-- services
+|   |   |   \-- api.js
+|   |   +-- styles
+|   |   |   +-- colors.js
+|   |   |   +-- index.js
+|   |   |   +-- radius.js
+|   |   |   +-- reports.js
+|   |   |   +-- shadows.js
+|   |   |   +-- spacing.js
+|   |   |   \-- typography.js
+|   |   \-- theme
+|   |       +-- theme.js
+|   |       \-- useAppTheme.js
+|   +-- .env.example
 |   +-- .gitignore
 |   +-- App.js
 |   +-- app.json
 |   +-- babel.config.js
+|   +-- eas.json
 |   +-- index.js
 |   +-- package-lock.json
 |   \-- package.json
@@ -55,6 +153,7 @@
 |   |   |   |   +-- _forms.scss
 |   |   |   |   +-- _layout.scss
 |   |   |   |   +-- _tables.scss
+|   |   |   |   +-- _toggles.scss
 |   |   |   |   \-- _variables.scss
 |   |   |   \-- react.svg
 |   |   +-- components
@@ -98,14 +197,24 @@
 |   |   |   +-- users
 |   |   |   |   +-- UsersForm.jsx
 |   |   |   |   \-- UsersTable.jsx
+|   |   |   +-- wallet
+|   |   |   |   \-- WalletPopover.jsx
 |   |   |   +-- warehouse
 |   |   |   |   +-- WarehouseFilters.jsx
 |   |   |   |   \-- WarehouseTable.jsx
 |   |   |   \-- PrivateRoute.jsx
 |   |   +-- context
 |   |   |   \-- AuthContext.jsx
+|   |   +-- layouts
+|   |   |   +-- AppLayout.jsx
+|   |   |   \-- PlatformLayout.jsx
 |   |   +-- pages
+|   |   |   +-- platform
+|   |   |   |   +-- PlansPage.jsx
+|   |   |   |   +-- PlatformLoginPage.jsx
+|   |   |   |   \-- TenantsPage.jsx
 |   |   |   +-- BranchesPage.jsx
+|   |   |   +-- CashPage.jsx
 |   |   |   +-- ExpensesPage.jsx
 |   |   |   +-- HistoryPage.jsx
 |   |   |   +-- LoginPage.jsx
@@ -123,101 +232,130 @@
 |   |   +-- App.jsx
 |   |   \-- main.jsx
 |   +-- .env
+|   +-- .env.example
 |   +-- .gitignore
 |   +-- eslint.config.js
 |   +-- index.html
 |   +-- package-lock.json
 |   +-- package.json
 |   +-- README.md
+|   +-- vercel.json
 |   \-- vite.config.js
-+-- server
-|   +-- data
-|   |   +-- ruxshona.db
-|   |   \-- ruxshona.sqbpro
-|   +-- middleware,
-|   +-- realtime}
-|   +-- src
-|   |   +-- config
-|   |   |   \-- env.js
-|   |   +-- db
-|   |   |   +-- migrations
-|   |   |   |   \-- add_outlets.sql
-|   |   |   +-- seeders
-|   |   |   \-- connection.js
-|   |   +-- middleware
-|   |   |   \-- auth.js
-|   |   +-- modules
-|   |   |   +-- auth
-|   |   |   |   +-- auth.controller.js
-|   |   |   |   +-- auth.repository.js
-|   |   |   |   +-- auth.routes.js
-|   |   |   |   \-- auth.service.js
-|   |   |   +-- branches
-|   |   |   |   +-- branches.controller.js
-|   |   |   |   +-- branches.repository.js
-|   |   |   |   +-- branches.routes.js
-|   |   |   |   \-- branches.service.js
-|   |   |   +-- expenses
-|   |   |   |   +-- expenses.controller.js
-|   |   |   |   +-- expenses.repository.js
-|   |   |   |   +-- expenses.routes.js
-|   |   |   |   \-- expenses.service.js
-|   |   |   +-- history
-|   |   |   |   +-- history.controller.js
-|   |   |   |   +-- history.repository.js
-|   |   |   |   +-- history.routes.js
-|   |   |   |   \-- history.service.js
-|   |   |   +-- production
-|   |   |   |   +-- production.controller.js
-|   |   |   |   +-- production.repository.js
-|   |   |   |   +-- production.routes.js
-|   |   |   |   \-- production.service.js
-|   |   |   +-- products
-|   |   |   |   +-- products.controller.js
-|   |   |   |   +-- products.repository.js
-|   |   |   |   +-- products.routes.js
-|   |   |   |   +-- products.service.js
-|   |   |   |   \-- products.validation.js
-|   |   |   +-- reports
-|   |   |   |   +-- reports.controller.js
-|   |   |   |   +-- reports.repository.js
-|   |   |   |   +-- reports.routes.js
-|   |   |   |   \-- reports.service.js
-|   |   |   +-- returns
-|   |   |   |   +-- returns.controller.js
-|   |   |   |   +-- returns.repository.js
-|   |   |   |   +-- returns.routes.js
-|   |   |   |   \-- returns.service.js
-|   |   |   +-- sales
-|   |   |   |   +-- sales.controller.js
-|   |   |   |   +-- sales.repository.js
-|   |   |   |   +-- sales.routes.js
-|   |   |   |   \-- sales.service.js
-|   |   |   +-- transfers
-|   |   |   |   +-- transfers.controller.js
-|   |   |   |   +-- transfers.repository.js
-|   |   |   |   +-- transfers.routes.js
-|   |   |   |   \-- transfers.service.js
-|   |   |   +-- users
-|   |   |   |   +-- users.controller.js
-|   |   |   |   +-- users.repository.js
-|   |   |   |   +-- users.routes.js
-|   |   |   |   \-- users.service.js
-|   |   |   \-- warehouse
-|   |   |       +-- warehouse.controller.js
-|   |   |       +-- warehouse.repository.js
-|   |   |       +-- warehouse.routes.js
-|   |   |       \-- warehouse.service.js
-|   |   +-- realtime
-|   |   |   \-- index.js
-|   |   +-- utils
-|   |   +-- config,db
-|   |   |   +-- migrations,modules,
-|   |   |   \-- seeders,modules,
-|   |   +-- app.js
-|   |   \-- server.js
-|   +-- .env
-|   +-- package-lock.json
-|   \-- package.json
-+-- fayltuzilma
-\-- generate_tree.ps1
+\-- server
+    +-- data
+    |   +-- ruxshona.db
+    |   \-- ruxshona.sqbpro
+    +-- middleware,
+    +-- realtime}
+    +-- scripts
+    |   +-- debug_db.js
+    |   +-- fix_users_table.js
+    |   +-- health_check.js
+    |   +-- reset_tenant_data.js
+    |   +-- seed_platform.js
+    |   \-- verify_isolation.js
+    +-- src
+    |   +-- config
+    |   |   \-- env.js
+    |   +-- db
+    |   |   +-- migrations
+    |   |   |   \-- add_outlets.sql
+    |   |   +-- seeders
+    |   |   \-- connection.js
+    |   +-- middleware
+    |   |   +-- auth.js
+    |   |   \-- tenantScope.js
+    |   +-- modules
+    |   |   +-- auth
+    |   |   |   +-- auth.controller.js
+    |   |   |   +-- auth.repository.js
+    |   |   |   +-- auth.routes.js
+    |   |   |   \-- auth.service.js
+    |   |   +-- branches
+    |   |   |   +-- branches.controller.js
+    |   |   |   +-- branches.repository.js
+    |   |   |   +-- branches.routes.js
+    |   |   |   \-- branches.service.js
+    |   |   +-- cash
+    |   |   |   +-- cash.controller.js
+    |   |   |   +-- cash.repository.js
+    |   |   |   +-- cash.routes.js
+    |   |   |   \-- cash.service.js
+    |   |   +-- expenses
+    |   |   |   +-- expenses.controller.js
+    |   |   |   +-- expenses.repository.js
+    |   |   |   +-- expenses.routes.js
+    |   |   |   \-- expenses.service.js
+    |   |   +-- history
+    |   |   |   +-- history.controller.js
+    |   |   |   +-- history.repository.js
+    |   |   |   +-- history.routes.js
+    |   |   |   \-- history.service.js
+    |   |   +-- platform
+    |   |   |   +-- features.controller.js
+    |   |   |   +-- features.repository.js
+    |   |   |   +-- features.service.js
+    |   |   |   +-- plans.controller.js
+    |   |   |   +-- plans.repository.js
+    |   |   |   +-- plans.service.js
+    |   |   |   +-- platform.controller.js
+    |   |   |   +-- platform.routes.js
+    |   |   |   \-- platform.service.js
+    |   |   +-- production
+    |   |   |   +-- production.controller.js
+    |   |   |   +-- production.repository.js
+    |   |   |   +-- production.routes.js
+    |   |   |   \-- production.service.js
+    |   |   +-- products
+    |   |   |   +-- products.controller.js
+    |   |   |   +-- products.repository.js
+    |   |   |   +-- products.routes.js
+    |   |   |   +-- products.service.js
+    |   |   |   \-- products.validation.js
+    |   |   +-- reports
+    |   |   |   +-- reports.controller.js
+    |   |   |   +-- reports.repository.js
+    |   |   |   +-- reports.routes.js
+    |   |   |   \-- reports.service.js
+    |   |   +-- returns
+    |   |   |   +-- returns.controller.js
+    |   |   |   +-- returns.repository.js
+    |   |   |   +-- returns.routes.js
+    |   |   |   \-- returns.service.js
+    |   |   +-- sales
+    |   |   |   +-- sales.controller.js
+    |   |   |   +-- sales.repository.js
+    |   |   |   +-- sales.routes.js
+    |   |   |   \-- sales.service.js
+    |   |   +-- transfers
+    |   |   |   +-- transfers.controller.js
+    |   |   |   +-- transfers.repository.js
+    |   |   |   +-- transfers.routes.js
+    |   |   |   \-- transfers.service.js
+    |   |   +-- users
+    |   |   |   +-- users.controller.js
+    |   |   |   +-- users.repository.js
+    |   |   |   +-- users.routes.js
+    |   |   |   \-- users.service.js
+    |   |   +-- wallet
+    |   |   |   +-- wallet.controller.js
+    |   |   |   \-- wallet.routes.js
+    |   |   \-- warehouse
+    |   |       +-- warehouse.controller.js
+    |   |       +-- warehouse.repository.js
+    |   |       +-- warehouse.routes.js
+    |   |       \-- warehouse.service.js
+    |   +-- realtime
+    |   |   \-- index.js
+    |   +-- scripts
+    |   |   \-- add_expiry_to_tenants.js
+    |   +-- utils
+    |   +-- {config,db
+    |   |   +-- migrations,modules,
+    |   |   \-- seeders,modules,
+    |   +-- app.js
+    |   \-- server.js
+    +-- .env
+    +-- .env.example
+    +-- package-lock.json
+    \-- package.json

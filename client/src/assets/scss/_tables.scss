@@ -50,8 +50,10 @@
 /* App-specific table styles: full width and clean borders */
 .app-table {
     width: 100%;
-    border-collapse: collapse; /* crisp single borders */
-    table-layout: fixed; /* columns share available space */
+    border-collapse: collapse;
+    /* crisp single borders */
+    table-layout: fixed;
+    /* columns share available space */
     width: 100%;
     color: var(--text-secondary);
 }
@@ -59,14 +61,14 @@
 .app-table th,
 .app-table td {
     padding: 12px 14px;
-    border: 1px solid rgba(255,255,255,0.04);
+    border: 1px solid rgba(255, 255, 255, 0.04);
     text-align: left;
     vertical-align: middle;
     word-break: break-word;
 }
 
 .app-table th {
-    background: rgba(255,255,255,0.02);
+    background: rgba(255, 255, 255, 0.02);
     color: var(--text-muted);
     font-weight: 700;
     font-size: 12px;
@@ -74,7 +76,7 @@
 }
 
 .app-table tbody tr:hover {
-    background: rgba(255,255,255,0.03);
+    background: rgba(255, 255, 255, 0.03);
 }
 
 /* Make table responsive: horizontal scroll on small screens */
@@ -103,4 +105,85 @@
 /* Utility: make last column narrow for action icons */
 .app-table td:last-child {
     width: 80px;
+}
+
+/* ========= Responsive "Card Table" (<= 540px) =========
+   How it works:
+   - table header hidden
+   - each row becomes a card
+   - each cell shows: label + value using data-label attr
+*/
+@media (max-width: 540px) {
+    .table-wrapper {
+        overflow-x: visible;
+        /* because we turn rows into cards */
+    }
+
+    .table {
+        border-spacing: 0;
+    }
+
+    .table thead {
+        display: none;
+    }
+
+    .table tbody tr {
+        display: block;
+        margin-bottom: 10px;
+        padding: 10px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        background: var(--bg-card);
+        box-shadow: var(--shadow-sm);
+        animation: tableRowIn 140ms ease;
+    }
+
+    .table tbody td {
+        display: grid;
+        grid-template-columns: 130px 1fr;
+        gap: 10px;
+        padding: 8px 6px;
+        border: none;
+        border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+        word-break: break-word;
+    }
+
+    .table tbody td:last-child {
+        border-bottom: none;
+    }
+
+    .table tbody td::before {
+        content: attr(data-label);
+        font-size: 11px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-weight: 700;
+        align-self: center;
+    }
+
+    /* Actions column becomes right aligned */
+    .table tbody td[data-label="Amallar"] {
+        grid-template-columns: 1fr;
+    }
+
+    .table tbody td[data-label="Amallar"]::before {
+        display: none;
+    }
+
+    .table tbody td[data-label="Amallar"] .history-actions {
+        justify-content: flex-end;
+    }
+}
+
+@keyframes tableRowIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }

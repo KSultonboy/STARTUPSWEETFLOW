@@ -1,24 +1,20 @@
 // client/src/context/AuthContext.jsx
-import { createContext, useContext, useEffect, useState } from "react";
+import { useState } from "react";
 import api from "../services/api";
-
-const AuthContext = createContext(null);
+import { AuthContext } from "./authContext";
 
 export function AuthProvider({ children }) {
-    const [user, setUser] = useState(null);   // { id, full_name, role, tenantId, ... }
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
+    const [user, setUser] = useState(() => {
         const storedUser = localStorage.getItem("rt_user");
-        if (storedUser) {
-            try {
-                setUser(JSON.parse(storedUser));
-            } catch {
-                localStorage.removeItem("rt_user");
-            }
+        if (!storedUser) return null;
+        try {
+            return JSON.parse(storedUser);
+        } catch {
+            localStorage.removeItem("rt_user");
+            return null;
         }
-        setLoading(false);
-    }, []);
+    });
+    const [loading] = useState(false);
 
     const login = async (username, password, tenantSlug) => {
         const res = await api.post("/auth/login", {
@@ -46,7 +42,7 @@ export function AuthProvider({ children }) {
         localStorage.setItem("rt_user", JSON.stringify(user));
 
         setUser(user);
-    }
+    };
 
     const logout = async () => {
         try {
@@ -69,8 +65,4 @@ export function AuthProvider({ children }) {
             {children}
         </AuthContext.Provider>
     );
-}
-
-export function useAuth() {
-    return useContext(AuthContext);
 }

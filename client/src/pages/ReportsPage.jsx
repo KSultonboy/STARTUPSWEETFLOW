@@ -1,7 +1,7 @@
 // client/src/pages/ReportsPage.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../services/api";
-import { useAuth } from "../context/AuthContext"; // [NEW]
+import { useAuth } from "../context/authContext"; // [NEW]
 
 import ReportsFilterBar from "../components/reports/ReportsFilterBar";
 import ReportsSummaryCards from "../components/reports/ReportsSummaryCards";
@@ -45,7 +45,7 @@ function ReportsPage() {
     const [productsList, setProductsList] = useState([]);
     const [productCategoryFilter, setProductCategoryFilter] = useState("ALL");
 
-    const fetchOverview = async (selectedDate) => {
+    const fetchOverview = useCallback(async (selectedDate) => {
         try {
             setLoading(true);
             setError("");
@@ -70,11 +70,11 @@ function ReportsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [mode]);
 
     useEffect(() => {
         fetchOverview(date);
-    }, [date, mode]);
+    }, [date, fetchOverview]);
 
     // Filiallar bo‘yicha jami cheklar soni (faqat BRANCH)
     const branchChecksTotal = useMemo(() => {
@@ -97,7 +97,6 @@ function ReportsPage() {
         const totalUsers = stats.totalUsers ?? 0;
         const totalProducts = stats.totalProducts ?? 0;
 
-        const todaySalesAmount = stats.todaySalesAmount ?? 0;
         const productionQuantity = stats.productionQuantity ?? 0;
         const productionBatchCount = stats.productionBatchCount ?? 0;
 
@@ -335,8 +334,6 @@ function ReportsPage() {
                     : mode === "year"
                         ? "Yillik"
                         : "Kunlik";
-
-        const safeStats = stats || {};
 
         const summaryRowsHtml = summaryCards
             .map(

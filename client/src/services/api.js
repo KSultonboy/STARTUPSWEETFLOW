@@ -138,7 +138,7 @@ api.interceptors.response.use(
         if (status === 403 && message.includes("to'lov") || message.includes('xizmat bloklangan')) {
             try {
                 alert(error.response?.data?.message || 'To\'lov amalga oshirilmagan. Iltimos, balansni to\'ldiring.');
-            } catch (e) {
+            } catch {
                 // ignore UI errors
             }
             if (window.location.pathname !== '/') {

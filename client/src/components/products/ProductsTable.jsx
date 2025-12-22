@@ -23,13 +23,8 @@ function formatCategory(category) {
 }
 
 function ProductsTable({ loading, products, onEdit, onDelete }) {
-    if (loading) {
-        return <p>Yuklanmoqda...</p>;
-    }
-
-    if (!products.length) {
-        return <p>Ko‘rsatiladigan mahsulot yo‘q.</p>;
-    }
+    if (loading) return <p>Yuklanmoqda...</p>;
+    if (!products.length) return <p>Ko‘rsatiladigan mahsulot yo‘q.</p>;
 
     return (
         <div className="table-wrapper">
@@ -48,23 +43,21 @@ function ProductsTable({ loading, products, onEdit, onDelete }) {
                 <tbody>
                     {products.map((p, index) => (
                         <tr key={p.id}>
-                            <td>{index + 1}</td>
-                            <td>{p.name}</td>
-                            <td>{formatUnit(p.unit)}</td>
-                            <td>{formatCategory(p.category)}</td>
-                            <td>
-                                {typeof p.price === "number"
-                                    ? p.price.toLocaleString("uz-UZ")
-                                    : "—"}
+                            <td data-label="T/r">{index + 1}</td>
+                            <td data-label="Nomi">{p.name}</td>
+                            <td data-label="Birlik">{formatUnit(p.unit)}</td>
+                            <td data-label="Kategoriya">{formatCategory(p.category)}</td>
+                            <td data-label="Narx">
+                                {typeof p.price === "number" ? p.price.toLocaleString("uz-UZ") : "—"}
                             </td>
-                            <td>
+                            <td data-label="Do‘kon narxi">
                                 {p.category === CATEGORY_PRODUCT &&
                                     typeof p.wholesale_price === "number" &&
                                     p.wholesale_price > 0
                                     ? p.wholesale_price.toLocaleString("uz-UZ")
                                     : "—"}
                             </td>
-                            <td>
+                            <td data-label="Amallar">
                                 <div className="history-actions">
                                     <button
                                         type="button"

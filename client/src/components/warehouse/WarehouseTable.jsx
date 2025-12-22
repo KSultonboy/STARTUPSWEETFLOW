@@ -35,15 +35,15 @@ function WarehouseTable({ loading, stocks }) {
                             stocks.map((item, index) => {
                                 const status = getStatus(item.quantity);
                                 return (
-                                    <tr
-                                        key={`${item.product_id}-${item.branch_id || "central"}`}
-                                    >
-                                        <td>{index + 1}</td>
-                                        <td>{item.product_name}</td>
-                                        <td>{item.branch_name || "Markaziy ombor"}</td>
-                                        <td>{item.quantity}</td>
-                                        <td>{item.unit}</td>
-                                        <td>
+                                    <tr key={`${item.product_id}-${item.branch_id || "central"}`}>
+                                        <td data-label="#">{index + 1}</td>
+                                        <td data-label="Mahsulot">{item.product_name}</td>
+                                        <td data-label="Filial / Ombor">
+                                            {item.branch_name || "Markaziy ombor"}
+                                        </td>
+                                        <td data-label="Miqdor">{item.quantity}</td>
+                                        <td data-label="O‘lchov birligi">{item.unit}</td>
+                                        <td data-label="Holati">
                                             <span className={`badge badge-${status.type}`}>
                                                 {status.label}
                                             </span>

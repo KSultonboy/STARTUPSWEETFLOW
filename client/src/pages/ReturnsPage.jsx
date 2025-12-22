@@ -1,8 +1,8 @@
 // client/src/pages/ReturnsPage.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import api from "../services/api";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/authContext";
 
 // Componentlar
 import BranchReturnForm from "../components/returns/BranchReturnForm";
@@ -68,10 +68,6 @@ function ReturnsPage() {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
-    // Barcode input (web, klaviatura + skaner uchun)
-    const [barcodeInput, setBarcodeInput] = useState("");
-    const [barcodeLoading, setBarcodeLoading] = useState(false);
-
     // *** Faqat PRODUCT / DECORATION mahsulotlari ***
     const productOptions = useMemo(
         () =>
@@ -113,70 +109,9 @@ function ReturnsPage() {
         });
     }, [list, mode, isAdmin]);
 
-    const applyProductToItems = (product, setItemsFn) => {
-        if (!product) return;
-        setItemsFn((prev) => {
-            const arr = prev || [];
-            const idx = arr.findIndex(
-                (row) => String(row.product_id) === String(product.id)
-            );
-            if (idx !== -1) {
-                return arr.map((row, i) => {
-                    if (i !== idx) return row;
-                    const currentQty = Number(row.quantity) || 0;
-                    return {
-                        ...row,
-                        quantity: String(currentQty + 1),
-                        unit: row.unit || product.unit || "",
-                    };
-                });
-            }
-            return [
-                ...arr,
-                {
-                    product_id: String(product.id),
-                    quantity: "1",
-                    unit: product.unit || "",
-                    reason: "",
-                },
-            ];
-        });
-    };
-
-    const handleBarcodeSubmit = async (e) => {
-        e.preventDefault();
-        const code = barcodeInput.trim();
-        if (!code) return;
-        try {
-            setBarcodeLoading(true);
-            setError("");
-            const res = await api.get(
-                `/products/by-barcode/${encodeURIComponent(code)}`
-            );
-            const product = res.data;
-
-            if (isBranch) {
-                applyProductToItems(product, setItems);
-            }
-            if (isAdmin && mode === "OUTLET") {
-                applyProductToItems(product, setOutletItems);
-            }
-
-            setSuccess(
-                `Shtrix kod bo'yicha vazvratga qo'shildi: ${product.name}`
-            );
-            setBarcodeInput("");
-        } catch (err) {
-            console.error(err);
-            setError("Shtrix kod bo'yicha mahsulot topilmadi.");
-        } finally {
-            setBarcodeLoading(false);
-        }
-    };
-
     // --- API chaqiruvlar ---
 
-    const loadBranches = async () => {
+    const loadBranches = useCallback(async () => {
         if (!isAdmin) return;
         try {
             const res = await api.get("/branches");
@@ -184,16 +119,16 @@ function ReturnsPage() {
         } catch (err) {
             console.error(err);
         }
-    };
+    }, [isAdmin]);
 
-    const loadProducts = async () => {
+    const loadProducts = useCallback(async () => {
         try {
             const res = await api.get("/products");
             setProducts(res.data || []);
         } catch (err) {
             console.error(err);
         }
-    };
+    }, []);
 
     const loadReturns = async () => {
         try {
@@ -224,7 +159,7 @@ function ReturnsPage() {
     useEffect(() => {
         loadProducts();
         loadBranches();
-    }, []);
+    }, [loadProducts, loadBranches]);
 
     useEffect(() => {
         loadReturns();
@@ -728,35 +663,6 @@ function ReturnsPage() {
                 >
                     {success}
                 </div>
-            )}
-
-            {(isBranch || (isAdmin && mode === "OUTLET")) && (
-                <form
-                    onSubmit={handleBarcodeSubmit}
-                    style={{
-                        marginBottom: 12,
-                        display: "flex",
-                        gap: 8,
-                        alignItems: "center",
-                        flexWrap: "wrap",
-                    }}
-                >
-                    <input
-                        className="input"
-                        type="text"
-                        placeholder="Shtrix kodni skanerlang yoki yozing"
-                        value={barcodeInput}
-                        onChange={(e) => setBarcodeInput(e.target.value)}
-                        style={{ maxWidth: 280 }}
-                    />
-                    <button
-                        type="submit"
-                        className="btn btn-secondary"
-                        disabled={barcodeLoading}
-                    >
-                        {barcodeLoading ? "..." : "Shtrix koddan qo'shish"}
-                    </button>
-                </form>
             )}
 
             {/* Filial formasi */}

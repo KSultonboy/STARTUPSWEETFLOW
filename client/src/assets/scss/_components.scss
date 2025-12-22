@@ -161,9 +161,11 @@
 
 /* Use when you want a button to match input vertical sizing */
 .button--input-size {
-    padding: 10px 12px; /* match .input padding */
+    padding: 10px 12px;
+    /* match .input padding */
     height: auto;
-    min-height: 40px; /* ensure comfortable click target */
+    min-height: 40px;
+    /* ensure comfortable click target */
 }
 
 
@@ -230,7 +232,7 @@
 .modal-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.5);
+    background: rgba(0, 0, 0, 0.5);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -294,7 +296,8 @@
 
 /* Secondary (muted) button used as cancel */
 .button-secondary {
-    padding: 10px 12px; /* match input/button size */
+    padding: 10px 12px;
+    /* match input/button size */
     border-radius: var(--radius-md);
     border: 1px solid var(--border-color);
     background: transparent;
@@ -309,5 +312,273 @@
 }
 
 .button-secondary:hover {
-    background: rgba(255,255,255,0.03);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+/* ========= Filter Bar ========= */
+.filterbar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+.filterbar--space {
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.filterbar__meta {
+    font-size: 13px;
+    opacity: 0.88;
+}
+
+.filterbar__field {
+    min-width: 220px;
+
+    label {
+        font-size: 12px;
+        margin-bottom: 4px;
+        opacity: 0.85;
+    }
+}
+
+.filterbar__group--modes {
+    display: inline-flex;
+    border-radius: 999px;
+    padding: 2px;
+    background: rgba(15, 23, 42, 0.55);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    gap: 2px;
+}
+
+.filterbar__mode {
+    border: none;
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    background: transparent;
+    color: var(--text-main);
+    transition: transform 120ms ease, background 120ms ease, color 120ms ease;
+
+    &:active {
+        transform: scale(0.98);
+    }
+
+    &.is-active {
+        background: rgba(255, 255, 255, 0.92);
+        color: #0b1120;
+    }
+}
+
+.filterbar__group--inputs {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+
+    .input {
+        min-width: 160px;
+    }
+}
+
+.filterbar__btn {
+    box-shadow: none;
+    padding-inline: 14px;
+    font-size: 13px;
+}
+
+/* Mobile stacking */
+@media (max-width: 540px) {
+    .filterbar--space {
+        align-items: stretch;
+    }
+
+    .filterbar__field {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .filterbar__group--inputs {
+        width: 100%;
+
+        .input {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .filterbar__btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+}
+
+/* ========= Wallet Popover ========= */
+.wallet {
+    position: relative;
+}
+
+.wallet__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    font-size: 13px;
+    border: 1px solid transparent;
+}
+
+.wallet__label {
+    white-space: nowrap;
+    max-width: 360px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.wallet__icon {
+    margin-right: 2px;
+}
+
+.wallet__overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+}
+
+.wallet__panel {
+    position: absolute;
+    top: 46px;
+    right: 0;
+    width: 320px;
+    z-index: 100;
+    padding: 16px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    animation: popIn 140ms ease;
+}
+
+.wallet__content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.wallet__muted {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.wallet__title {
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.wallet__value {
+    font-size: 15px;
+}
+
+.wallet__bold {
+    font-weight: 800;
+}
+
+.wallet__stats {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    justify-content: space-between;
+}
+
+.wallet__stat {
+    flex: 1;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 10px;
+    font-size: 13px;
+}
+
+.wallet__stat--right {
+    text-align: right;
+}
+
+.wallet__actions {
+    display: flex;
+    gap: 8px;
+
+    .button-primary,
+    .button-secondary {
+        flex: 1;
+    }
+}
+
+.wallet__form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.wallet__formhead {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.wallet__back {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.wallet__row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.wallet__error {
+    font-size: 12px;
+    color: var(--color-danger);
+}
+
+@keyframes popIn {
+    from {
+        opacity: 0;
+        transform: translateY(-6px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Wallet mobile: panel becomes centered/fixed */
+@media (max-width: 540px) {
+    .wallet__label {
+        max-width: 160px;
+    }
+
+    .wallet__panel {
+        position: fixed;
+        top: 80px;
+        left: 12px;
+        right: 12px;
+        width: auto;
+        border-radius: var(--radius-xl);
+    }
+
+    .wallet__stats {
+        flex-direction: column;
+    }
+
+    .wallet__row {
+        grid-template-columns: 1fr;
+    }
+
+    .wallet__actions {
+        flex-direction: column;
+    }
 }

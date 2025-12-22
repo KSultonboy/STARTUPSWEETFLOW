@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState } from "react";
 import { Link, Outlet, useLocation, Navigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/authContext";
 
 export default function PlatformLayout() {
     const { user, logout } = useAuth();

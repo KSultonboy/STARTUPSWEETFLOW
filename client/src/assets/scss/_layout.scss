@@ -6,32 +6,29 @@
     padding: 20px;
     background: var(--bg-main);
     color: var(--text-main);
-    /* Subtle gradient mesh background optional */
     background-image:
         radial-gradient(at 0% 0%, rgba(var(--color-primary), 0.15) 0px, transparent 50%),
         radial-gradient(at 100% 100%, rgba(var(--color-secondary), 0.1) 0px, transparent 50%);
     background-attachment: fixed;
     transition: all 0.3s ease;
     overflow-x: hidden;
-    /* Fix horizontal scroll */
 }
 
 .app-shell {
     width: 100%;
-    max-width: none; /* allow full width on large screens */
-    /* Wider for dashboard feel */
+    max-width: none;
     margin: 0 auto;
     display: flex;
     gap: 24px;
     position: relative;
 }
 
-/* MAIN: allow the main column to grow and fill remaining space */
+/* MAIN */
 .app-main {
     flex: 1;
     display: flex;
     flex-direction: column;
-    min-width: 0; /* prevent overflow in flex layouts */
+    min-width: 0;
     padding-left: 20px;
     padding-right: 20px;
 }
@@ -54,7 +51,7 @@
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-lg);
     z-index: 50;
-    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* TOPBAR */
@@ -69,15 +66,31 @@
     margin-bottom: 24px;
     border-radius: var(--radius-lg);
     flex-shrink: 0;
+    animation: topbarIn 240ms ease;
+}
+
+.app-topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
 }
 
 /* Page header helpers */
+.page {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    animation: pageIn 220ms ease;
+}
+
 .page-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     gap: 12px;
     margin-bottom: 16px;
+    animation: headerIn 240ms ease;
 }
 
 .page-title {
@@ -93,21 +106,20 @@
     line-height: 1.4;
 }
 
+.page-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    margin-left: auto;
+}
 
 .app-topbar-right {
     display: flex;
     align-items: center;
     gap: 16px;
     margin-left: auto;
-}
-
-/* Platform owner area (topbar) - make it expand to full width and right-align contents */
-.platform-owner {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex: 1 1 100%; /* allow it to grow and fill available space */
-    justify-content: flex-end; /* keep email and logout aligned to the right */
 }
 
 /* THEME TOGGLE */
@@ -160,7 +172,6 @@
     align-items: center;
     gap: 12px;
     padding-left: 8px;
-    /* Alignment fix */
     margin-bottom: 8px;
 }
 
@@ -208,7 +219,6 @@
     overflow-y: auto;
 }
 
-/* Hide scrollbar for nav */
 .app-nav-vertical::-webkit-scrollbar {
     width: 4px;
 }
@@ -227,12 +237,13 @@
     color: var(--text-secondary);
     font-size: 14px;
     font-weight: 500;
-    transition: all 0.2s ease;
+    transition: all 0.18s ease;
     border: 1px solid transparent;
+    position: relative;
+    transform: translateZ(0);
 
     &:hover {
         background: rgba(255, 255, 255, 0.05);
-        /* Very subtle hover */
         color: var(--text-main);
     }
 
@@ -240,8 +251,6 @@
         background: linear-gradient(90deg, rgba(79, 70, 229, 0.15) 0%, transparent 100%);
         border-left: 3px solid var(--color-primary);
         color: var(--color-primary);
-        /* Use primary color for text */
-        /* For dark mode readability, ensure primary isn't too dark. Indigo 400 is good */
     }
 
     .app-nav-icon {
@@ -252,7 +261,6 @@
     }
 }
 
-/* COLLAPSED STATE */
 .app-sidebar--collapsed .app-brand {
     display: none;
 }
@@ -301,13 +309,23 @@
     align-self: center;
 }
 
-/* RESPONSIVE (< 768px) */
+/* -----------------------------
+   ✅ MOBILE DRAWER (<768px)
+------------------------------*/
 @media (max-width: 768px) {
     .app-shell {
         gap: 0;
     }
 
-    /* Sidebar becomes off-canvas drawer */
+    .app-hamburger {
+        display: block;
+    }
+
+    .app-sidebar-toggle-desktop {
+        display: none;
+    }
+
+    /* Drawer */
     .app-sidebar {
         position: fixed;
         top: 0;
@@ -316,73 +334,82 @@
         width: 280px;
         z-index: 100;
         transform: translateX(-100%);
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: transform 220ms cubic-bezier(0.2, 0.9, 0.2, 1);
         border-right: 1px solid var(--glass-border);
         background: var(--bg-sidebar);
-        /* Solid bg for better contrast on mobile */
+        will-change: transform;
     }
 
-    /* When NOT collapsed (i.e., OPEN on mobile), slide in */
+    /* When open */
     .app-shell:not(.is-collapsed) .app-sidebar {
         transform: translateX(0);
         box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+        animation: drawerIn 220ms cubic-bezier(0.2, 0.9, 0.2, 1);
     }
 
-    /* Overlay Backdrop when sidebar is open */
-    .app-shell:not(.is-collapsed)::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(4px);
-        z-index: 90;
-        animation: fadeIn 0.2s ease;
-    }
-
-    .app-sidebar-toggle-desktop {
-        display: none;
-    }
-
-    .app-hamburger {
-        display: block;
-    }
-
-    /* MAIN CONTENT AREA */
+    /* MAIN */
     .app-main {
         flex: 1;
         display: flex;
         flex-direction: column;
         min-width: 0;
-        /* Prevent flex overflow */
         margin-left: 20px;
         margin-right: 20px;
-        /* Added right margin as requested */
     }
 
     .app-content {
         flex: 1;
-        /* Allow content to grow */
         width: 100%;
     }
 
-    /* Adjust page container padding for mobile */
     .app-container {
         padding: 10px;
     }
 
-    /* Adjust topbar for mobile */
     .app-topbar {
         padding: 8px 10px;
         margin-bottom: 14px;
         gap: 8px;
+        position: relative;
+        z-index: 80;
+        flex-wrap: wrap;
+        /* drawer open bo‘lsa overlay ostida qoladi */
     }
 
     .app-topbar-right {
         gap: 8px;
+        flex-wrap: wrap;
+        width: 100%;
+        justify-content: flex-end;
     }
 
     .app-user {
         padding: 4px 8px;
+    }
+
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .page-title {
+        font-size: 24px;
+    }
+
+    .page-subtitle {
+        max-width: 100%;
+    }
+
+    .page-header-actions {
+        width: 100%;
+        justify-content: flex-start;
+        align-items: stretch;
+    }
+
+    .page-header-actions > * {
+        flex: 1 1 200px;
+        min-width: 180px;
     }
 }
 
@@ -395,6 +422,8 @@
     .app-main {
         padding-left: 10px;
         padding-right: 10px;
+        margin-left: 0;
+        margin-right: 0;
     }
 
     .card {
@@ -408,19 +437,114 @@
 
     .app-topbar-right {
         gap: 6px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        width: 100%;
+    }
+
+    .app-user-text {
+        display: none;
+    }
+
+    .app-theme-toggle {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+
+    .button-primary {
+        padding: 6px 10px;
     }
 
     .app-content {
         padding-bottom: 60px;
     }
+
+    .page-header-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .page-header-actions > * {
+        width: 100%;
+        min-width: 0;
+    }
 }
 
-@keyframes fadeIn {
+/* ✅ Prevent body scroll when drawer open */
+.rt-no-scroll {
+    overflow: hidden;
+}
+
+/* ✅ Clickable overlay element */
+.app-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(4px);
+    z-index: 90;
+    animation: overlayFadeIn 180ms ease;
+}
+
+@keyframes overlayFadeIn {
     from {
         opacity: 0;
     }
 
     to {
         opacity: 1;
+    }
+}
+
+@keyframes drawerIn {
+    from {
+        transform: translateX(-100%);
+    }
+
+    to {
+        transform: translateX(0);
+    }
+}
+
+@keyframes pageIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes headerIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes topbarIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-topbar,
+    .page,
+    .page-header {
+        animation: none;
     }
 }

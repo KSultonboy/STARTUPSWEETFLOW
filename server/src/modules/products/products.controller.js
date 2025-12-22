@@ -74,23 +74,6 @@ async function deleteProduct(req, res) {
     }
 }
 
-async function getByBarcode(req, res) {
-    try {
-        const { code } = req.params;
-        if (!code) {
-            return res.status(400).json({ message: 'Shtrix kod kerak' });
-        }
-        const product = await service.getProductByBarcode(req.tenantId, code);
-        if (!product) {
-            return res.status(404).json({ message: 'Mahsulot topilmadi' });
-        }
-        res.json(product);
-    } catch (err) {
-        console.error('getByBarcode error:', err);
-        res.status(400).json({ message: err.message || 'Xatolik' });
-    }
-}
-
 module.exports = {
     getAllProducts,
     getDecorationProducts,
@@ -98,5 +81,4 @@ module.exports = {
     createProduct,
     updateProduct,
     deleteProduct,
-    getByBarcode,
 };

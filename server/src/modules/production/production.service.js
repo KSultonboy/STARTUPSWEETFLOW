@@ -1,7 +1,6 @@
 // server/src/modules/production/production.service.js
 
 const repo = require("./production.repository");
-const { get, run } = require("../../db/connection");
 
 function validateBatchInput(data = {}) {
     const { batch_date, shift, note, created_by, items } = data;
@@ -41,32 +40,6 @@ function validateBatchInput(data = {}) {
 
 async function createBatch(tenantId, data) {
     const valid = validateBatchInput(data);
-
-    // Har bir pozitsiya bo'yicha: agar mahsulot birligi 'kg' bo'lmasa va barcode yo'q bo'lsa,
-    // avtomatik barcode generatsiya qilamiz (faqat bir marta).
-    for (const item of valid.items) {
-        const productId = item.product_id;
-        const product = await get(
-            `SELECT id, unit, barcode FROM products WHERE id = ? AND tenant_id = ?`,
-            [productId, tenantId]
-        );
-        if (!product) continue;
-
-        const unit = String(product.unit || "").toLowerCase();
-        const hasBarcode = !!(product.barcode && String(product.barcode).trim());
-
-        if (unit !== "kg" && !hasBarcode) {
-            // 13 xonali raqam: 4 + (tenantId + productId) padded
-            const raw = `${tenantId}${product.id}`.replace(/\D/g, "");
-            const padded = raw.padStart(12, "0");
-            const barcode = `4${padded.slice(-12)}`;
-
-            await run(
-                `UPDATE products SET barcode = ? WHERE id = ? AND tenant_id = ?`,
-                [barcode, product.id, tenantId]
-            );
-        }
-    }
 
     return repo.createBatch(tenantId, valid);
 }

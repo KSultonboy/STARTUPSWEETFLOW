@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { useAuth } from "./context/AuthContext";
+import { useAuth } from "./context/authContext";
 
 import LoginPage from "./pages/LoginPage";
 import ProductsPage from "./pages/ProductsPage";
@@ -24,6 +24,59 @@ import PlatformLayout from "./layouts/PlatformLayout";
 import TenantsPage from "./pages/platform/TenantsPage";
 import PlansPage from "./pages/platform/PlansPage";
 import PlatformLoginPage from "./pages/platform/PlatformLoginPage";
+
+const hasFeature = (user, key) => {
+  if (!user?.features || Object.keys(user.features).length === 0) {
+    return true;
+  }
+  return !!user.features[key];
+};
+
+function TenantIndexRedirect() {
+  const { user } = useAuth();
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user.role === "production") {
+    return <Navigate to="/production" replace />;
+  }
+
+  if (user.role === "branch") {
+    return <Navigate to="/sales" replace />;
+  }
+
+  if (user.role === "admin" || user.role === "TENANT_ADMIN") {
+    if (hasFeature(user, "accounting")) {
+      return <Navigate to="/reports" replace />;
+    }
+    if (hasFeature(user, "sales")) {
+      return <Navigate to="/sales" replace />;
+    }
+    if (hasFeature(user, "warehouse")) {
+      return <Navigate to="/warehouse" replace />;
+    }
+    return <Navigate to="/products" replace />;
+  }
+
+  return <Navigate to="/login" replace />;
+}
+
+function ReportsRoute() {
+  const { user } = useAuth();
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  const isAdmin = user.role === "admin" || user.role === "TENANT_ADMIN";
+  if (!isAdmin || !hasFeature(user, "accounting")) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <ReportsPage />;
+}
 
 function App() {
   const { loading } = useAuth();
@@ -55,7 +108,7 @@ function App() {
                but here we rely on the backend RBAC or simple component mounting. 
                Ideally strict Guard wrapper should be here too. */}
 
-        <Route path="reports" element={<ReportsPage />} />
+        <Route path="reports" element={<ReportsRoute />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="branches" element={<BranchesPage />} />
         <Route path="products" element={<ProductsPage />} />
@@ -67,7 +120,7 @@ function App() {
         <Route path="production" element={<ProductionPage />} />
 
         {/* Default route logic is handled in AppLayout or here */}
-        <Route index element={<Navigate to="reports" />} />
+        <Route index element={<TenantIndexRedirect />} />
       </Route>
 
       {/* Fallback */}

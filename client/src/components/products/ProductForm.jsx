@@ -57,18 +57,6 @@ function ProductForm({
                     />
                 </div>
 
-                {/* Shtrix kod (ixtiyoriy, lekin maxsus sotuv uchun foydali) */}
-                <div>
-                    <label className="form-label">Shtrix kod (Barcode)</label>
-                    <input
-                        className="input"
-                        name="barcode"
-                        value={form.barcode || ""}
-                        onChange={onChange}
-                        placeholder="Masalan: 4780012345678"
-                    />
-                </div>
-
                 {/* Birlik – kommunalda ko‘rinmaydi */}
                 {!isUtility && (
                     <div>

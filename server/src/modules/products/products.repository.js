@@ -5,7 +5,6 @@ async function findAll(tenantId) {
     SELECT
       id,
       name,
-      barcode,
       unit,
       category,
       price,
@@ -24,7 +23,6 @@ async function findDecorations(tenantId) {
     SELECT
       id,
       name,
-      barcode,
       unit,
       category,
       price,
@@ -43,7 +41,6 @@ async function findUtilities(tenantId) {
     SELECT
       id,
       name,
-      barcode,
       unit,
       category,
       price,
@@ -62,7 +59,6 @@ async function findById(tenantId, id) {
     SELECT
       id,
       name,
-      barcode,
       unit,
       category,
       price,
@@ -75,12 +71,11 @@ async function findById(tenantId, id) {
   return get(query, [id, tenantId]);
 }
 
-async function findByBarcode(tenantId, barcode) {
+async function findByName(tenantId, name) {
   const query = `
     SELECT
       id,
       name,
-      barcode,
       unit,
       category,
       price,
@@ -88,21 +83,21 @@ async function findByBarcode(tenantId, barcode) {
       created_at,
       updated_at
     FROM products
-    WHERE tenant_id = ? AND barcode = ?
+    WHERE tenant_id = ?
+      AND LOWER(TRIM(name)) = LOWER(TRIM(?))
     LIMIT 1
   `;
-  return get(query, [tenantId, barcode]);
+  return get(query, [tenantId, name]);
 }
 
-async function create(tenantId, { name, unit, category, price, wholesale_price, barcode }) {
+async function create(tenantId, { name, unit, category, price, wholesale_price }) {
   const query = `
-    INSERT INTO products (tenant_id, name, barcode, unit, category, price, wholesale_price, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    INSERT INTO products (tenant_id, name, unit, category, price, wholesale_price, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
   `;
   const result = await run(query, [
     tenantId,
     name,
-    barcode || null,
     unit,
     category || 'PRODUCT',
     price || 0,
@@ -112,12 +107,11 @@ async function create(tenantId, { name, unit, category, price, wholesale_price, 
   return findById(tenantId, insertedId);
 }
 
-async function update(tenantId, id, { name, unit, category, price, wholesale_price, barcode }) {
+async function update(tenantId, id, { name, unit, category, price, wholesale_price }) {
   const query = `
     UPDATE products
     SET
       name = ?,
-      barcode = ?,
       unit = ?,
       category = ?,
       price = ?,
@@ -127,7 +121,6 @@ async function update(tenantId, id, { name, unit, category, price, wholesale_pri
   `;
   await run(query, [
     name,
-    barcode || null,
     unit,
     category || 'PRODUCT',
     price || 0,
@@ -148,7 +141,7 @@ module.exports = {
   findDecorations,
   findUtilities,
   findById,
-   findByBarcode,
+  findByName,
   create,
   update,
   remove,

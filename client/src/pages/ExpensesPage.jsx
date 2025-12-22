@@ -1,7 +1,7 @@
 // client/src/pages/ExpensesPage.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import api from "../services/api";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/authContext";
 
 import ExpensesTabs from "../components/expenses/ExpensesTabs";
 import ExpensesForm from "../components/expenses/ExpensesForm";

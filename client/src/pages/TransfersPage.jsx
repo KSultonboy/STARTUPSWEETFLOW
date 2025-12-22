@@ -1,7 +1,7 @@
 // client/src/pages/TransfersPage.jsx
 import { useEffect, useMemo, useState } from "react";
 import api from "../services/api";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/authContext";
 
 import TransferForm from "../components/transfers/TransferForm";
 import TransfersTable from "../components/transfers/TransfersTable";
@@ -118,7 +118,6 @@ function TransfersPage() {
         fetchBranches();
         fetchProducts();
         fetchTransfers();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const resetForm = () => {

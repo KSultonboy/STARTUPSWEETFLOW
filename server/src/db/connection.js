@@ -168,7 +168,6 @@ db.serialize(() => {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     tenant_id INTEGER, -- Multi-tenant
     name TEXT NOT NULL,
-    barcode TEXT,                -- optional: unique per tenant
     unit TEXT NOT NULL,                
     category TEXT NOT NULL DEFAULT 'PRODUCT', 
     price REAL DEFAULT 0,               
@@ -177,9 +176,6 @@ db.serialize(() => {
     updated_at TEXT
   )
 `);
-  // ensure barcode column exists if DB was created before this change
-  addColumnIfMissing('products', 'barcode TEXT');
-
   // 4) SALES
   db.run(`
     CREATE TABLE IF NOT EXISTS sales (

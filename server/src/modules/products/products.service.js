@@ -15,7 +15,6 @@ async function getUtilityProducts(tenantId) {
 async function createProduct(tenantId, data) {
     const name = (data.name || '').trim();
     const unit = (data.unit || '').trim();
-    const barcode = (data.barcode || '').trim() || null;
 
     if (!name) {
         throw new Error('Mahsulot nomi majburiy.');
@@ -24,22 +23,19 @@ async function createProduct(tenantId, data) {
         throw new Error('O‘lchov birligi majburiy.');
     }
 
+    const existingByName = await repo.findByName(tenantId, name);
+    if (existingByName) {
+        throw new Error('Bu nomdagi mahsulot allaqachon mavjud.');
+    }
+
+
     const payload = {
         name,
         unit,
         category: data.category || 'PRODUCT', // PRODUCT / DECORATION / UTILITY
         price: Number(data.price) || 0,
         wholesale_price: Number(data.wholesale_price) || 0,
-        barcode,
     };
-
-    // Agar barcode berilgan bo'lsa, shu tenant ichida unique ekanini tekshiramiz
-    if (barcode) {
-        const existing = await repo.findByBarcode(tenantId, barcode);
-        if (existing) {
-            throw new Error('Bu shtrix kod ushbu tenantdagi boshqa mahsulotga biriktirilgan.');
-        }
-    }
 
     return repo.create(tenantId, payload);
 }
@@ -51,7 +47,6 @@ async function updateProduct(tenantId, id, data) {
 
     const name = (data.name || '').trim();
     const unit = (data.unit || '').trim();
-    const barcode = (data.barcode || '').trim() || null;
 
     if (!name) {
         throw new Error('Mahsulot nomi majburiy.');
@@ -60,21 +55,19 @@ async function updateProduct(tenantId, id, data) {
         throw new Error('O‘lchov birligi majburiy.');
     }
 
+    const existingByName = await repo.findByName(tenantId, name);
+    if (existingByName && Number(existingByName.id) !== Number(id)) {
+        throw new Error('Bu nomdagi mahsulot allaqachon mavjud.');
+    }
+
+
     const payload = {
         name,
         unit,
         category: data.category || 'PRODUCT',
         price: Number(data.price) || 0,
         wholesale_price: Number(data.wholesale_price) || 0,
-        barcode,
     };
-
-    if (barcode) {
-        const existing = await repo.findByBarcode(tenantId, barcode);
-        if (existing && existing.id !== id) {
-            throw new Error('Bu shtrix kod ushbu tenantdagi boshqa mahsulotga biriktirilgan.');
-        }
-    }
 
     return repo.update(tenantId, id, payload);
 }
@@ -86,12 +79,6 @@ async function deleteProduct(tenantId, id) {
     await repo.remove(tenantId, id);
 }
 
-async function getProductByBarcode(tenantId, barcode) {
-    const trimmed = (barcode || '').trim();
-    if (!trimmed) return null;
-    return repo.findByBarcode(tenantId, trimmed);
-}
-
 module.exports = {
     getAllProducts,
     getDecorationProducts,
@@ -99,5 +86,4 @@ module.exports = {
     createProduct,
     updateProduct,
     deleteProduct,
-    getProductByBarcode,
 };

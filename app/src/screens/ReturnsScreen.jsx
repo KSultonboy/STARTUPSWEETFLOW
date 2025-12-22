@@ -7,10 +7,8 @@ import {
     FlatList,
     ActivityIndicator,
     Alert,
-    Modal,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
-import { BarCodeScanner } from "expo-barcode-scanner";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { styles } from "./ReturnsScreen.styles";
@@ -46,11 +44,6 @@ export default function ReturnsScreen() {
 
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
-
-    // Barcode scanner state (Returns)
-    const [scannerVisible, setScannerVisible] = useState(false);
-    const [scannerPermission, setScannerPermission] = useState(null);
-    const [scannerBusy, setScannerBusy] = useState(false);
 
     const fetchProducts = async () => {
         try {
@@ -109,82 +102,6 @@ export default function ReturnsScreen() {
             case "REJECTED": return "Bekor";
             default: return status;
         }
-    };
-
-    const applyScannedProduct = (product) => {
-        if (!product) return;
-
-        setProducts((prev) => {
-            const exists = prev.find((p) => p.id === product.id);
-            if (exists) return prev;
-            return [...prev, product];
-        });
-
-        setItems((prev) => {
-            const idx = prev.findIndex((row) => String(row.product_id) === String(product.id));
-            if (idx !== -1) {
-                return prev.map((row, i) => {
-                    if (i !== idx) return row;
-                    const currentQty = Number(row.quantity) || 0;
-                    return {
-                        ...row,
-                        quantity: String(currentQty + 1),
-                        unit: row.unit || product.unit || "",
-                    };
-                });
-            }
-
-            return [
-                ...prev,
-                {
-                    product_id: String(product.id),
-                    quantity: "1",
-                    unit: product.unit || "",
-                    reason: "",
-                },
-            ];
-        });
-    };
-
-    const lookupByBarcode = async (code) => {
-        const trimmed = String(code || "").trim();
-        if (!trimmed) return;
-        try {
-            const res = await api.get(`/products/by-barcode/${encodeURIComponent(trimmed)}`);
-            const product = res.data;
-            applyScannedProduct(product);
-            setSuccess(`Shtrix kod bo'yicha vazvratga qo'shildi: ${product.name}`);
-        } catch (err) {
-            console.error(err);
-            setError("Shtrix kod bo'yicha mahsulot topilmadi.");
-        }
-    };
-
-    const openScanner = async () => {
-        setError("");
-        setSuccess("");
-        try {
-            const { status } = await BarCodeScanner.requestPermissionsAsync();
-            const granted = status === "granted";
-            setScannerPermission(granted);
-            if (!granted) {
-                setError("Kamera uchun ruxsat berilmadi.");
-                return;
-            }
-            setScannerBusy(false);
-            setScannerVisible(true);
-        } catch (err) {
-            console.error(err);
-            setError("Kameraga ruxsat so'rashda xatolik.");
-        }
-    };
-
-    const handleBarCodeScanned = async ({ data }) => {
-        if (scannerBusy) return;
-        setScannerBusy(true);
-        await lookupByBarcode(data);
-        setScannerVisible(false);
-        setScannerBusy(false);
     };
 
     const handleItemChange = (index, field, value) => {
@@ -314,12 +231,7 @@ export default function ReturnsScreen() {
             {activeTab === "form" ? (
                 <View style={styles.box}>
                     <Text style={styles.boxTitle}>Yangi vazvrat</Text>
-
-                    <TouchableOpacity style={styles.scanBtn} onPress={openScanner}>
-                        <Text style={styles.scanBtnText}>📷 Shtrix kodni skanerlash</Text>
-                    </TouchableOpacity>
-
-                    <Text style={styles.label}>Sana</Text>
+<Text style={styles.label}>Sana</Text>
                     <TextInput
                         style={styles.input}
                         value={date}
@@ -451,89 +363,6 @@ export default function ReturnsScreen() {
         return (
             <View style={styles.container}>
                 <ListHeader />
-                <Modal
-                    visible={scannerVisible}
-                    transparent
-                    animationType="fade"
-                    onRequestClose={() => setScannerVisible(false)}
-                >
-                    <View
-                        style={{
-                            flex: 1,
-                            backgroundColor: "rgba(0,0,0,0.85)",
-                            justifyContent: "center",
-                            padding: 16,
-                        }}
-                    >
-                        <View
-                            style={{
-                                flex: 1,
-                                borderRadius: 12,
-                                overflow: "hidden",
-                                borderWidth: 1,
-                                borderColor: "rgba(148,163,184,0.7)",
-                            }}
-                        >
-                            {scannerPermission ? (
-                                <BarCodeScanner
-                                    onBarCodeScanned={handleBarCodeScanned}
-                                    style={{ flex: 1 }}
-                                />
-                            ) : (
-                                <View
-                                    style={{
-                                        flex: 1,
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        backgroundColor: "#020617",
-                                    }}
-                                >
-                                    <Text style={{ color: "#e5e7eb", marginBottom: 12, fontSize: 16 }}>
-                                        Kameraga ruxsat berilmadi
-                                    </Text>
-                                    <TouchableOpacity
-                                        onPress={() => setScannerVisible(false)}
-                                        style={{
-                                            paddingHorizontal: 16,
-                                            paddingVertical: 8,
-                                            borderRadius: 8,
-                                            backgroundColor: "#1f2937",
-                                        }}
-                                    >
-                                        <Text style={{ color: "#e5e7eb", fontWeight: "600" }}>Yopish</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            )}
-                        </View>
-
-                        <View
-                            style={{
-                                marginTop: 12,
-                                padding: 10,
-                                backgroundColor: "rgba(15,23,42,0.95)",
-                                borderRadius: 10,
-                                flexDirection: "row",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                            }}
-                        >
-                            <Text style={{ color: "#e5e7eb", fontSize: 13 }}>
-                                Vazvrat uchun mahsulot shtrix kodini skaner qiling
-                            </Text>
-                            <TouchableOpacity
-                                onPress={() => setScannerVisible(false)}
-                                style={{
-                                    paddingHorizontal: 12,
-                                    paddingVertical: 6,
-                                    borderRadius: 8,
-                                    backgroundColor: "#0f172a",
-                                }}
-                            >
-                                <Text style={{ color: "#e5e7eb", fontWeight: "700" }}>Yopish</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </Modal>
             </View>
         );
     }

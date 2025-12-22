@@ -29,7 +29,6 @@ function ProductsPage() {
 
     const [form, setForm] = useState({
         name: "",
-        barcode: "",
         unit: "dona", // 'dona' yoki 'kg'
         price: "",
         wholesale_price: "",
@@ -37,7 +36,6 @@ function ProductsPage() {
     });
 
     const isProduct = form.category === CATEGORY_PRODUCT;
-    const isDecor = form.category === CATEGORY_DECORATION;
     const isUtility = form.category === CATEGORY_UTILITY;
     const isIngredient = form.category === CATEGORY_INGREDIENT;
 
@@ -91,7 +89,6 @@ function ProductsPage() {
     const resetForm = () => {
         setForm({
             name: "",
-            barcode: "",
             unit: "dona",
             price: "",
             wholesale_price: "",
@@ -116,12 +113,20 @@ function ProductsPage() {
             return;
         }
 
+        const normalizedName = form.name.trim().toLowerCase();
+        const existingByName = (products || []).find(
+            (p) => String(p.name || "").trim().toLowerCase() === normalizedName
+        );
+        if (existingByName && Number(existingByName.id) !== Number(editingId)) {
+            setError("Bu nomdagi mahsulot allaqachon mavjud.");
+            return;
+        }
+
         try {
             setSaving(true);
 
             const payload = {
                 name: form.name.trim(),
-                barcode: (form.barcode || "").trim(),
                 unit: isUtility ? "dona" : form.unit,
                 category: form.category,
                 price: Number(form.price) || 0,
@@ -157,7 +162,6 @@ function ProductsPage() {
         setEditingId(product.id);
         setForm({
             name: product.name || "",
-            barcode: product.barcode || "",
             unit: product.unit === "kg" ? "kg" : "dona",
             price: typeof product.price === "number" ? String(product.price) : "",
             wholesale_price:

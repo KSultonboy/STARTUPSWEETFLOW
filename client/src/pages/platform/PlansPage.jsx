@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import api from "../../services/api";
 
 export default function PlansPage() {
@@ -20,11 +20,7 @@ export default function PlansPage() {
     const [formMode, setFormMode] = useState('CREATE'); // CREATE | EDIT
     const [editingId, setEditingId] = useState(null);
 
-    useEffect(() => {
-        loadPlans();
-    }, []);
-
-    const loadPlans = async () => {
+    const loadPlans = useCallback(async () => {
         try {
             const res = await api.get('/platform/plans');
             const rows = res.data || [];
@@ -41,7 +37,9 @@ export default function PlansPage() {
                 };
                 if (primary.features) {
                     primary.features.forEach(f => {
-                        if (feats.hasOwnProperty(f)) feats[f] = true;
+                        if (Object.prototype.hasOwnProperty.call(feats, f)) {
+                            feats[f] = true;
+                        }
                     });
                 }
 
@@ -70,7 +68,14 @@ export default function PlansPage() {
         } catch (err) {
             alert(err.message);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            loadPlans();
+        }, 0);
+        return () => clearTimeout(timeoutId);
+    }, [loadPlans]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();

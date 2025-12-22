@@ -176,7 +176,6 @@ function BranchesPage() {
                 onSubmit={handleSubmit}
                 onReset={resetForm}
             />
-
             {/* Table */}
             <BranchesTable
                 branches={branches}

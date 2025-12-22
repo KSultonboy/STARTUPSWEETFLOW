@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../services/api";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/authContext";
 
 const STATUS_LABELS = {
     PENDING: "Davom qilmoqda",
@@ -22,10 +22,7 @@ function ReceivingPage() {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
-    const [barcodeInput, setBarcodeInput] = useState("");
-    const [barcodeLoading, setBarcodeLoading] = useState(false);
-
-    const fetchTransfers = async () => {
+    const fetchTransfers = useCallback(async () => {
         if (!branchId) return;
         try {
             setLoading(true);
@@ -39,11 +36,11 @@ function ReceivingPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [branchId]);
 
     useEffect(() => {
         fetchTransfers();
-    }, [branchId]);
+    }, [fetchTransfers]);
 
     const selectedTransfer = useMemo(
         () => transfers.find((t) => t.id === selectedTransferId) || null,
@@ -89,51 +86,6 @@ function ReceivingPage() {
             setError(msg);
         } finally {
             setSavingItemId(null);
-        }
-    };
-
-    const handleBarcodeSubmit = async (e) => {
-        e.preventDefault();
-        const code = barcodeInput.trim();
-        if (!code) return;
-        if (!selectedTransfer) {
-            setError("Avval transferni tanlang.");
-            return;
-        }
-        try {
-            setBarcodeLoading(true);
-            setError("");
-            setSuccess("");
-
-            const res = await api.get(
-                `/products/by-barcode/${encodeURIComponent(code)}`
-            );
-            const product = res.data;
-
-            const pendingItem =
-                (selectedTransfer.items || []).find(
-                    (it) =>
-                        it.status === "PENDING" &&
-                        String(it.product_id) === String(product.id)
-                ) || null;
-
-            if (!pendingItem) {
-                setError(
-                    "Bu transferda ushbu mahsulot topilmadi yoki allaqachon qabul qilingan."
-                );
-                return;
-            }
-
-            await handleAction(selectedTransfer.id, pendingItem.id, "accept");
-            setSuccess(
-                `Shtrix kod bo'yicha qabul qilindi: ${product.name}`
-            );
-            setBarcodeInput("");
-        } catch (err) {
-            console.error(err);
-            setError("Shtrix kod bo'yicha mahsulot topilmadi.");
-        } finally {
-            setBarcodeLoading(false);
         }
     };
 
@@ -212,35 +164,6 @@ function ReceivingPage() {
                             borderTop: "1px solid rgba(148,163,184,0.3)",
                         }}
                     >
-                        <form
-                            onSubmit={handleBarcodeSubmit}
-                            style={{
-                                marginBottom: 8,
-                                display: "flex",
-                                gap: 8,
-                                alignItems: "center",
-                                flexWrap: "wrap",
-                            }}
-                        >
-                            <input
-                                className="input"
-                                type="text"
-                                placeholder="Shtrix kodni skanerlang yoki yozing"
-                                value={barcodeInput}
-                                onChange={(e) => setBarcodeInput(e.target.value)}
-                                style={{ maxWidth: 260 }}
-                            />
-                            <button
-                                type="submit"
-                                className="btn btn-secondary"
-                                disabled={barcodeLoading}
-                            >
-                                {barcodeLoading
-                                    ? "..."
-                                    : "Shtrix kod bilan qabul qilish"}
-                            </button>
-                        </form>
-
                         <div
                             style={{
                                 marginBottom: 6,

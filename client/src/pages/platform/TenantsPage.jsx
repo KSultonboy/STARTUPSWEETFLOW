@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import api from "../../services/api";
 
 export default function TenantsPage() {
@@ -34,19 +34,14 @@ export default function TenantsPage() {
     const [revealError, setRevealError] = useState('');
     const [revealedPassword, setRevealedPassword] = useState('');
 
-    useEffect(() => {
-        loadTenants();
-        loadPlans();
-    }, []);
-
-    const loadTenants = async () => {
+    const loadTenants = useCallback(async () => {
         try {
             const res = await api.get('/platform/tenants');
             setTenants(res.data);
         } catch (err) {
             console.error("Xatolik:", err);
         }
-    };
+    }, []);
 
     const handleDeleteRequest = (tenant) => {
         setDeleteTarget(tenant);
@@ -113,14 +108,22 @@ export default function TenantsPage() {
         }
     };
 
-    const loadPlans = async () => {
+    const loadPlans = useCallback(async () => {
         try {
             const res = await api.get('/platform/plans');
             setPlans(res.data);
         } catch (err) {
             console.error(err);
         }
-    }
+    }, []);
+
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            loadTenants();
+            loadPlans();
+        }, 0);
+        return () => clearTimeout(timeoutId);
+    }, [loadTenants, loadPlans]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -171,16 +174,6 @@ export default function TenantsPage() {
             contractEndDate: tenant.contract_end_date || '',
             status: tenant.status || 'ACTIVE'
         });
-    };
-
-    const handleDelete = async (id) => {
-        if (!confirm("O'chirishni tasdiqlaysizmi?")) return;
-        try {
-            await api.delete(`/platform/tenants/${id}`);
-            loadTenants();
-        } catch (err) {
-            alert('Xatolik: ' + err.message);
-        }
     };
 
     const handleToggleStatus = async (tenant) => {
